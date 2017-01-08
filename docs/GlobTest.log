@@ -1,0 +1,51 @@
+commit a0d69f8716364eacfd6c6324cb1732e4bce478a3
+Author: jaa <jaa@sn127.fi>
+Date:   Sun Dec 18 18:19:36 2016 +0200
+
+    rename testCases -> tests
+
+M	base/src/test/scala/co/uproot/abandon/GlobTest.scala
+
+commit 9e39eae9ec00e5e30ef9a1bfacf637c49b0eeee3
+Author: jaa <jaa@sn127.fi>
+Date:   Mon Feb 1 20:05:08 2016 +0200
+
+    input-as-glob: Support cooked form with Regex.
+    
+    This adds support of basepath cooked regex, and also address review
+    comments made for PR #74 / 2016-01-31.
+
+M	base/src/test/scala/co/uproot/abandon/GlobTest.scala
+
+commit 5257ef5c6bc3fb19ba54a5eaca96152d71ac344e
+Author: jaa <jaa@sn127.fi>
+Date:   Sat Jan 30 14:54:06 2016 +0200
+
+    input-as-glob: Implemented basepath support with wildcard input (e.g. "cooked" glob)
+    
+    This implements basepath support with wildcard input, or cooked form of glob
+    where basepath to configuration file is used with glob. Also support `regex` for
+    wildcard patterns.
+    
+     - CHANGES.md: Updated
+     - README.md: pointer to doc/abandon.md
+     - doc/abandon.md: **very** initial user manual
+     - base/main/../Config: regex support
+     - base/main/../Process: new function `mkCanonicalDirPath`
+     - base/main/../Utils: `regex` and cooked `glob` support
+     - base/test/../GlobTest: `BasepathGlobTest` for cooked form
+     - sclT0004-glob/glob01.conf: Use all main forms of wildcards for inputs
+
+M	base/src/test/scala/co/uproot/abandon/GlobTest.scala
+
+commit 4c07ba1b1c3a45a13b5644a37d9e61283c3a7f05
+Author: jaa <jaa@sn127.fi>
+Date:   Thu Jan 28 23:52:59 2016 +0200
+
+    input-as-glob: Utility functionality to handle glob-pattern.
+    
+     - base/main/../Utils: globListFiles, new function to list files based on glob.
+     - base/test/../GlobTest: tests for glob
+     - testCases/globtree: test directory for glob tests
+
+A	base/src/test/scala/co/uproot/abandon/GlobTest.scala
