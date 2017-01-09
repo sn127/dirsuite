@@ -1,0 +1,5 @@
+/**/lib_managed/
+/**/src_managed/
+/**/target/
+/.idea/
+*.swp
