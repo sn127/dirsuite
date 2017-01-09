@@ -1,6 +1,7 @@
 package fi.sn127.utils.testing
 
-
+@SuppressWarnings(Array(
+  "org.wartremover.warts.Equals"))
 object TestComparator   {
 
   def txtComparator(first: String, second: String) :Boolean = {
