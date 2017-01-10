@@ -29,6 +29,10 @@ class FileUtilsTest extends FlatSpec with Matchers with Inside {
   val testDirPath = filesystem.getPath("tests/globtree").toAbsolutePath.normalize
   val fu = FileUtils(filesystem)
 
+  "getExeDir" must "work" in {
+    assert(fu.getExeDir(getClass).getFileName.toString === "test-classes")
+  }
+
   "getCanonicalDirPath" must "work" in {
     fu.getCanonicalPath(filesystem.getPath("/")).toString should be("/")
 
@@ -39,6 +43,7 @@ class FileUtilsTest extends FlatSpec with Matchers with Inside {
       filesystem.getPath(".").toAbsolutePath.normalize.toString)
   }
 
+
   "getParentDirPath" must "work" in {
     fu.getParentDirPath(filesystem.getPath("/foo/bar")).toString should be("/foo")
     fu.getParentDirPath(filesystem.getPath("/foo/bar/")).toString should be("/foo")
@@ -48,6 +53,7 @@ class FileUtilsTest extends FlatSpec with Matchers with Inside {
     fu.getParentDirPath(filesystem.getPath(".")).toString should be("")
     fu.getParentDirPath(filesystem.getPath("..")).toString should be("")
   }
+
 
   "getPathWithAnchor" must "work" in {
     fu.getPathWithAnchor("/foo/bar", filesystem.getPath("/snafu")).toString should be("/foo/bar")
@@ -62,17 +68,61 @@ class FileUtilsTest extends FlatSpec with Matchers with Inside {
       be(testDirPath.toString + "/b/b.txt")
   }
 
-  "ensurePath" must "find file" in {
+
+  behavior of "ensurePath"
+  it must "find file" in {
     fu.ensurePath(testDirPath.toString + "/one.txt") match {
       case Some(path) => assert(path.toString === testDirPath.toString + "/one.txt")
       case None => assert(false)
     }
   }
-
   it must "not find file" in {
     fu.ensurePath(testDirPath.toString + "/it-is-not-there.txt") match {
       case Some(path) => assert(false)
       case None =>
     }
+  }
+
+
+  behavior of "getBasename"
+  it must "work with file" in {
+    val result = fu.getBasename(fu.getPath("abc.txt"))
+    assert(result._1 === "abc")
+    assert(result._2 === Some("txt"))
+  }
+  it must "work with file with path" in {
+    val result = fu.getBasename(fu.getPath("/foo/bar/abc.txt"))
+    assert(result._1 === "abc")
+    assert(result._2 === Some("txt"))
+  }
+  it must "work with multiple dots" in {
+    val result = fu.getBasename(fu.getPath("/foo/bar/abc.tar.gz"))
+    assert(result._1 === "abc.tar")
+    assert(result._2 === Some("gz"))
+  }
+  it must "work without extension (file)" in {
+    val result = fu.getBasename(fu.getPath("abc"))
+    assert(result._1 === "abc")
+    assert(result._2 === None)
+  }
+  it must "work without extension (path)" in {
+    val result = fu.getBasename(fu.getPath("/foo/bar/abc"))
+    assert(result._1 === "abc")
+    assert(result._2 === None)
+  }
+  it must "work with zero ext" in {
+    val result = fu.getBasename(fu.getPath("/foo/bar/abc."))
+    assert(result._1 === "abc")
+    assert(result._2 === Some(""))
+  }
+  it must "work with unix hidden files" in {
+    val result = fu.getBasename(fu.getPath(".vimrc"))
+    assert(result._1 === "")
+    assert(result._2 === Some("vimrc"))
+  }
+  it must "work with unix hidden files with path" in {
+    val result = fu.getBasename(fu.getPath("/foo/bar/.vimrc"))
+    assert(result._1 === "")
+    assert(result._2 === Some("vimrc"))
   }
 }

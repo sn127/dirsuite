@@ -27,7 +27,7 @@ lazy val fs = (project in file("fs")).
   settings(commonSettings: _*).
   settings(
     name := "utils-fs",
-    version := "0.5.3",
+    version := "0.6.0",
     isSnapshot := false,
     fork in run := true,
     libraryDependencies += scalaArm,
@@ -41,6 +41,8 @@ lazy val testing = (project in file("testing")).
     name := "utils-testing",
     version := "0.5.0-dev",
     isSnapshot := true,
-    fork in run := true
+    fork in run := true,
+    libraryDependencies += scalaArm,
+    libraryDependencies += scalatest
   )
 

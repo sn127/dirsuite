@@ -90,6 +90,26 @@ final case class FileUtils(filesystem: FileSystem) {
   }
 
   /**
+   * Get basename (and extension) of path.
+   * Basename is filename's body part with last,
+   * dot-separated extension removed.
+   *
+   * @param path
+   * @return (basename, and optional extension)
+   */
+  @SuppressWarnings(Array("org.wartremover.warts.Equals"))
+  def getBasename(path: Path): (String, Option[String]) = {
+    val result: Array[String] = path.getFileName.toString.reverse.split("\\.", 2)
+
+    if (result.size == 2) {
+      (result(1).reverse,
+        Some(result(0).reverse))
+    } else {
+      (result(0).reverse, None)
+    }
+  }
+
+  /**
    * Make canonical path of path
    *
    * @param path to existing fs path

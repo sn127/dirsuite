@@ -1,0 +1,6 @@
+hello
+success/out.txt01.file.txt
+1
+2
+3
+world
