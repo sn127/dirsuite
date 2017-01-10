@@ -16,9 +16,8 @@
  */
 package fi.sn127.utils.testing
 
-import java.io.FileNotFoundException
 import java.nio.charset.StandardCharsets
-import java.nio.file.{FileSystems, Files, Paths}
+import java.nio.file.{FileSystems, Files}
 
 import org.scalatest.{FlatSpec, Inside, Matchers}
 
@@ -33,7 +32,7 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
 
   object DummyApp {
     val SUCCESS = 1
-    val FAILED = 0
+    val FAILED = -1
 
     def mainSuccess(args: Array[String]): Int = {
       SUCCESS
@@ -43,23 +42,24 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
       FAILED
     }
 
-    def mainNothing(args: Array[String]): Int = {
+    def mainArgsCount(args: Array[String]): Int = {
+      // Console.err.println("running with args: " + "%d".format(args.length))
       args.length
     }
 
     def mainTxt(args: Array[String]): Int = {
-      val path =
-        Files.write(
-          Paths.get(testdir.toString, args(0)),
-          args.mkString("hello\n", "\n", "\nworld\n").getBytes(StandardCharsets.UTF_8))
+      val path = Files.write(fu.getPath(testdir.toString, args(0)),
+          args
+            .mkString("hello\n", "\n", "\nworld\n")
+            .getBytes(StandardCharsets.UTF_8))
       SUCCESS
     }
 
     def mainXml(args: Array[String]): Int = {
-      val path =
-        Files.write(
-          Paths.get(testdir.toString, args(0)),
-          args.mkString("<hello><arg>", "</arg><arg>", "</arg></hello>\n").getBytes(StandardCharsets.UTF_8))
+      val path = Files.write(fu.getPath(testdir.toString, args(0)),
+          args
+            .mkString("<hello><arg>", "</arg><arg>", "</arg></hello>\n")
+            .getBytes(StandardCharsets.UTF_8))
       SUCCESS
     }
 
@@ -78,26 +78,28 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
 
 
   behavior of "TestRunner"
+  it must "work with empty execution args cmds file (e.g. rows of plain ';'s)" in {
+    var runCount = 0
+    TestRunner.run(testdir,
+      "success/noargs[0-9]+\\.cmds$",
+      (args: Array[String]) => {
+        runCount = runCount + 1
+        val argsLen = DummyApp.mainArgsCount(args)
+        argsLen == 0
+      })
+    assert(runCount === 2)
+  }
+
   it must "work without output files" in {
     var runCount = 0
     TestRunner.run(testdir,
       "success/tr[0-9]+\\.cmds$",
       (args: Array[String]) => {
         runCount = runCount + 1
-        val argCount = DummyApp.mainNothing(args)
-        argCount == 4
+        val argsLen = DummyApp.mainArgsCount(args)
+        argsLen == 4
       })
     assert(runCount === 3)
-  }
-
-  it must "detect plain execution errors" in {
-    assertThrows[AssertionError] {
-      TestRunner.run(testdir,
-        "failure/tr[0-9]+\\.cmds$",
-        (args: Array[String]) => {
-          DummyApp.FAILED == DummyApp.mainSuccess(args)
-        })
-    }
   }
   it must "work with valid txt-output files" in {
     var runCount = 0
@@ -107,6 +109,7 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
         runCount = runCount + 1
         DummyApp.SUCCESS == DummyApp.mainTxt(args)
       })
+    // two txt[0-9] cmds  files, each have one exec-row
     assert(runCount === 2)
   }
   it must "work with valid xml-output files" in {
@@ -131,32 +134,54 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
     assert(runCount === 2)
   }
 
-
-  it must "not work with missing files" in {
-    assertThrows[FileNotFoundException] {
+  it must "detect plain execution errors" in {
+    val ex = intercept[AssertionError] {
+      TestRunner.run(testdir,
+        "failure/tr[0-9]+\\.cmds$",
+        (args: Array[String]) => {
+          DummyApp.SUCCESS == DummyApp.mainFail(args)
+        })
+    }
+    assert(ex.getMessage.startsWith("assertion failed: " + TestRunner.executionFailureMsgPrefix))
+  }
+  it must "detect missing files" in {
+    val ex = intercept[AssertionError] {
       TestRunner.run(testdir,
         "failure/missing[0-9]+\\.cmds$",
         (args: Array[String]) => {
           DummyApp.SUCCESS == DummyApp.mainSuccess(args)
         })
     }
+    assert(ex.getMessage.startsWith("assertion failed: " + TestRunner.testVectorExceptionMsgPrefix))
   }
-  it must "not work with erroneous txt output" in {
-    assertThrows[AssertionError] {
+  it must "detect erroneous txt output" in {
+    val ex = intercept[AssertionError] {
       TestRunner.run(testdir,
         "failure/txt[0-9]+\\.cmds$",
         (args: Array[String]) => {
           DummyApp.SUCCESS == DummyApp.mainTxt(args)
         })
     }
+    assert(ex.getMessage.startsWith("assertion failed: " + TestRunner.testVectorFailureMsgPrefix))
   }
-  it must "not work with erroneous xml output" in {
-    assertThrows[AssertionError] {
+  it must "detect erroneous xml output" in {
+    val ex = intercept[AssertionError] {
       TestRunner.run(testdir,
         "failure/xml[0-9]+\\.cmds$",
         (args: Array[String]) => {
           DummyApp.SUCCESS == DummyApp.mainXml(args)
         })
     }
+    assert(ex.getMessage.startsWith("assertion failed: " + TestRunner.testVectorFailureMsgPrefix))
+  }
+  it must "detect and report XML SAX errors" in {
+    val ex = intercept[AssertionError] {
+      TestRunner.run(testdir,
+        "failure/xml-sax[0-9]+\\.cmds$",
+        (args: Array[String]) => {
+          DummyApp.SUCCESS == DummyApp.mainXml(args)
+        })
+    }
+    assert(ex.getMessage.startsWith("assertion failed: " + TestRunner.testVectorExceptionMsgPrefix))
   }
 }

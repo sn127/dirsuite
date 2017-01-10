@@ -27,6 +27,10 @@ import fi.sn127.utils.fs.FileUtils
   "org.wartremover.warts.NonUnitStatements"))
 object TestRunner {
 
+  val executionFailureMsgPrefix = "TEST FAILED WITH UNEXPECTED EXECUTION RESULT!"
+  val testVectorFailureMsgPrefix = "TEST FAILED WITH UNEXPECTED TEST VECTOR RESULT!"
+  val testVectorExceptionMsgPrefix = "TEST FAILED WITH EXCEPTION WHILE COMPARING TEST VECTORS!"
+
   def cmdsParser(cmdsPath: Path): List[Array[String]] = {
     // Scala-ARM: managed close
     managed(io.Source.fromFile(cmdsPath.toString)).map(source => {
@@ -100,25 +104,63 @@ object TestRunner {
     })
 
     for (tc <- testCases) {
+      testExecutor(tc)
+    }
+
+    def testExecutor(tc: TestCase) = {
+      def cmdsAndArgsStr(prefix: String): String = {
+        tc.cmdsAndArgs.map((cmds: Array[String]) => {
+          prefix + "[" + cmds.mkString("", ",", "") + "]"
+        }).mkString("\n")
+      }
+
       for (args <- tc.cmdsAndArgs) {
-        val success = specimen(argsFeeder(tc.name, args))
-        if (!success) {
-          println("UNEXPECTED EXEC RESULT!")
-          println("   with conf: " + tc.name.toString + "]")
-          print("   with args: ")
-          args.foreach(x => print("\"" + x + "\" "))
-          println("")
-          assert(false)
+        def execFailMsg = {
+          executionFailureMsgPrefix + "\n" +
+            "   name: " + tc.name.toString + "]\n" +
+            "   with execution sequence:\n" +
+            cmdsAndArgsStr(" " * 6 + "exec: ") + "\n" +
+            "   actual failed execution is: \n" +
+            args.mkString(" " * 6 + "exec: [", ",", "]") + "\n"
         }
+
+        val success = specimen(argsFeeder(tc.name, args))
+        val failureMsg = if (success) {
+          None
+        } else {
+          Some(execFailMsg)
+        }
+        assert(failureMsg.isEmpty, failureMsg.getOrElse("Internal error in test framework (exec)!")
+        )
       }
       for (testVector <- tc.testVectors) {
-        val sameResult = testVector.comparator(testVector.output, testVector.reference)
-        if (!sameResult) {
-          println("TEST FAILED: " + tc.name.toString)
-          println(" Failed ref: " + testVector.reference.toString)
-          println(" Failed out: " + testVector.output.toString)
+        def makeCompErrMsg(prefix: String) = {
+          prefix + "\n" +
+            "   with name: " + tc.name.toString + "]\n" +
+            "   with execution sequence:\n" +
+            cmdsAndArgsStr(" " * 6 + "exec: ") + "\n" +
+            "   failed test vector (output) after successful executions is: \n" +
+            "     reference: [" + testVector.reference.toString + "]\n" +
+            "     output:    [" + testVector.output.toString + "]\n"
         }
-        assert(sameResult)
+
+        val compErrorMsg = try {
+          val same = testVector.comparator(testVector.output, testVector.reference)
+          if (same) {
+            None
+          } else {
+            Some(makeCompErrMsg(testVectorFailureMsgPrefix))
+          }
+        } catch {
+          case ex: Exception =>
+            Some(
+              makeCompErrMsg(testVectorExceptionMsgPrefix) + "\n" +
+                "Exception: \n" +
+                "   message: " + ex.getMessage + "\n"
+            )
+        }
+        // NOTE: Collect all comp results, and report all end results together (Cats ...)?
+        assert(compErrorMsg.isEmpty, compErrorMsg.getOrElse("Internal error in test framework (ex)!"))
       }
     }
   }
