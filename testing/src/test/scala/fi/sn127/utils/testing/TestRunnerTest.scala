@@ -21,7 +21,11 @@ import java.nio.file.{FileSystems, Files}
 
 import org.scalatest.{FlatSpec, Inside, Matchers}
 
-import fi.sn127.utils.fs.FileUtils
+import fi.sn127.utils.fs.{FileUtils, Glob, Regex}
+
+class TestRunner extends TestRunnerLike {
+
+}
 
 @SuppressWarnings(Array("org.wartremover.warts.Var",
   "org.wartremover.warts.ToString"))
@@ -30,16 +34,18 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
   val testdir = filesystem.getPath("tests/testrunner").toAbsolutePath.normalize
   val fu = FileUtils(filesystem)
 
+  val testRunner = new TestRunner
+
   object DummyApp {
     val SUCCESS = 1
-    val FAILED = -1
+    val FAILURE = -1
 
     def mainSuccess(args: Array[String]): Int = {
       SUCCESS
     }
 
     def mainFail(args: Array[String]): Int = {
-      FAILED
+      FAILURE
     }
 
     def mainArgsCount(args: Array[String]): Int = {
@@ -48,7 +54,8 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
     }
 
     def mainTxt(args: Array[String]): Int = {
-      val path = Files.write(fu.getPath(testdir.toString, args(0)),
+      val path =
+        Files.write(fu.getPath(testdir.toString, args(0)),
           args
             .mkString("hello\n", "\n", "\nworld\n")
             .getBytes(StandardCharsets.UTF_8))
@@ -56,7 +63,8 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
     }
 
     def mainXml(args: Array[String]): Int = {
-      val path = Files.write(fu.getPath(testdir.toString, args(0)),
+      val path =
+        Files.write(fu.getPath(testdir.toString, args(0)),
           args
             .mkString("<hello><arg>", "</arg><arg>", "</arg></hello>\n")
             .getBytes(StandardCharsets.UTF_8))
@@ -70,118 +78,152 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
         } else if (args(1) === "xml") {
           mainXml(args)
         } else {
-          FAILED
+          FAILURE
         }
       result
     }
   }
 
+  behavior of "ignoreDirSuite"
+  it must "ignore files" in {
+    var runCount = 0
+    testRunner.ignoreDirSuite(testdir, Regex("success/tr[0-9]+\\.cmds")) { args: Array[String] =>
+      assertResult(4) {
+        runCount = runCount + 1
+        DummyApp.mainArgsCount(args)
+      }
+    }
+    assert(runCount === 0)
+  }
 
-  behavior of "TestRunner"
+  behavior of "runDirSuite"
   it must "work with empty execution args cmds file (e.g. rows of plain ';'s)" in {
     var runCount = 0
-    TestRunner.run(testdir,
-      "success/noargs[0-9]+\\.cmds$",
-      (args: Array[String]) => {
+    testRunner.runDirSuite(testdir, Regex("success/noargs[0-9]+\\.cmds")) { args: Array[String] =>
+      assertResult(0) {
         runCount = runCount + 1
-        val argsLen = DummyApp.mainArgsCount(args)
-        argsLen == 0
-      })
+        DummyApp.mainArgsCount(args)
+      }
+    }
+    assert(runCount === 2)
+  }
+  it must "work globs" in {
+    var runCount = 0
+    testRunner.runDirSuite(testdir, Glob("success/noargs*.cmds")) { args: Array[String] =>
+      assertResult(0) {
+        runCount = runCount + 1
+        DummyApp.mainArgsCount(args)
+      }
+    }
     assert(runCount === 2)
   }
 
   it must "work without output files" in {
     var runCount = 0
-    TestRunner.run(testdir,
-      "success/tr[0-9]+\\.cmds$",
-      (args: Array[String]) => {
+    testRunner.runDirSuite(testdir, Regex("success/tr[0-9]+\\.cmds")) { args: Array[String] =>
+      assertResult(4) {
         runCount = runCount + 1
-        val argsLen = DummyApp.mainArgsCount(args)
-        argsLen == 4
-      })
+        DummyApp.mainArgsCount(args)
+      }
+    }
     assert(runCount === 3)
   }
+
   it must "work with valid txt-output files" in {
     var runCount = 0
-    TestRunner.run(testdir,
-      "success/txt[0-9]+\\.cmds$",
-      (args: Array[String]) => {
+    testRunner.runDirSuite(testdir, Regex("success/txt[0-9]+\\.cmds")) { args: Array[String] =>
+      assertResult(DummyApp.SUCCESS) {
         runCount = runCount + 1
-        DummyApp.SUCCESS == DummyApp.mainTxt(args)
-      })
+        DummyApp.mainTxt(args)
+      }
+    }
     // two txt[0-9] cmds  files, each have one exec-row
     assert(runCount === 2)
   }
+
   it must "work with valid xml-output files" in {
     var runCount = 0
-    TestRunner.run(testdir,
-      "success/xml[0-9]+\\.cmds$",
-      (args: Array[String]) => {
+    testRunner.runDirSuite(testdir, Regex("success/xml[0-9]+\\.cmds")) { args: Array[String] =>
+      assertResult(DummyApp.SUCCESS) {
         runCount = runCount + 1
-        DummyApp.SUCCESS == DummyApp.mainXml(args)
-      })
+        DummyApp.mainXml(args)
+      }
+    }
     assert(runCount === 1)
   }
 
   it must "work with valid xml and txt -output files at the same time" in {
     var runCount = 0
-    TestRunner.run(testdir,
-      "success/txtxml[0-9]+\\.cmds$",
-      (args: Array[String]) => {
+    testRunner.runDirSuite(testdir, Regex("success/txtxml[0-9]+\\.cmds")) { args: Array[String] =>
+      assertResult(DummyApp.SUCCESS) {
         runCount = runCount + 1
-        DummyApp.SUCCESS == DummyApp.mainTxtXml(args)
-      })
+        DummyApp.mainTxtXml(args)
+      }
+    }
     assert(runCount === 2)
   }
 
   it must "detect plain execution errors" in {
-    val ex = intercept[AssertionError] {
-      TestRunner.run(testdir,
-        "failure/tr[0-9]+\\.cmds$",
-        (args: Array[String]) => {
-          DummyApp.SUCCESS == DummyApp.mainFail(args)
-        })
+    val ex = intercept[ExecutionException] {
+      testRunner.runDirSuite(testdir, Regex("failure/tr[0-9]+\\.cmds")) { args: Array[String] =>
+        assert(DummyApp.SUCCESS == DummyApp.mainFail(args))
+      }
     }
-    assert(ex.getMessage.startsWith("assertion failed: " + TestRunner.executionFailureMsgPrefix))
+    assert(ex.getMessage.startsWith(testRunner.executionFailureMsgPrefix))
   }
+
+  it must "detect plain execution errors with assertResult and interceptor" in {
+    val ex = intercept[ExecutionException] {
+      testRunner.runDirSuite(testdir, Regex("failure/tr[0-9]+\\.cmds")) { args: Array[String] =>
+        assertResult(DummyApp.SUCCESS) {
+          DummyApp.mainFail(args)
+        }
+      }
+    }
+    assert(ex.getMessage.startsWith(testRunner.executionFailureMsgPrefix))
+  }
+
   it must "detect missing files" in {
-    val ex = intercept[AssertionError] {
-      TestRunner.run(testdir,
-        "failure/missing[0-9]+\\.cmds$",
-        (args: Array[String]) => {
-          DummyApp.SUCCESS == DummyApp.mainSuccess(args)
-        })
+    val ex = intercept[TestVectorException] {
+      testRunner.runDirSuite(testdir, Regex("failure/missing[0-9]+\\.cmds")) { args: Array[String] =>
+        assertResult(DummyApp.SUCCESS) {
+          DummyApp.mainSuccess(args)
+        }
+      }
     }
-    assert(ex.getMessage.startsWith("assertion failed: " + TestRunner.testVectorExceptionMsgPrefix))
+    assert(ex.getMessage.startsWith(testRunner.testVectorExceptionMsgPrefix))
   }
+
   it must "detect erroneous txt output" in {
-    val ex = intercept[AssertionError] {
-      TestRunner.run(testdir,
-        "failure/txt[0-9]+\\.cmds$",
-        (args: Array[String]) => {
-          DummyApp.SUCCESS == DummyApp.mainTxt(args)
-        })
+    val ex = intercept[TestVectorException] {
+      testRunner.runDirSuite(testdir, Regex("failure/txt[0-9]+\\.cmds")) { args: Array[String] =>
+        assertResult(DummyApp.SUCCESS) {
+          DummyApp.mainTxt(args)
+        }
+      }
     }
-    assert(ex.getMessage.startsWith("assertion failed: " + TestRunner.testVectorFailureMsgPrefix))
+    assert(ex.getMessage.startsWith(testRunner.testVectorFailureMsgPrefix))
   }
+
   it must "detect erroneous xml output" in {
-    val ex = intercept[AssertionError] {
-      TestRunner.run(testdir,
-        "failure/xml[0-9]+\\.cmds$",
-        (args: Array[String]) => {
-          DummyApp.SUCCESS == DummyApp.mainXml(args)
-        })
+    val ex = intercept[TestVectorException] {
+      testRunner.runDirSuite(testdir, Regex("failure/xml[0-9]+\\.cmds")) { args: Array[String] =>
+        assertResult(DummyApp.SUCCESS) {
+          DummyApp.mainXml(args)
+        }
+      }
     }
-    assert(ex.getMessage.startsWith("assertion failed: " + TestRunner.testVectorFailureMsgPrefix))
+    assert(ex.getMessage.startsWith(testRunner.testVectorFailureMsgPrefix))
   }
-  it must "detect and report XML SAX errors" in {
-    val ex = intercept[AssertionError] {
-      TestRunner.run(testdir,
-        "failure/xml-sax[0-9]+\\.cmds$",
-        (args: Array[String]) => {
-          DummyApp.SUCCESS == DummyApp.mainXml(args)
-        })
+
+  it must "detect and report comparator exceptions (XML SAX, JSON, etc)" in {
+    val ex = intercept[TestVectorException] {
+      testRunner.runDirSuite(testdir, Regex("failure/xml-sax[0-9]+\\.cmds")) { (args: Array[String]) =>
+        assertResult(DummyApp.SUCCESS) {
+          DummyApp.mainXml(args)
+        }
+      }
     }
-    assert(ex.getMessage.startsWith("assertion failed: " + TestRunner.testVectorExceptionMsgPrefix))
+    assert(ex.getMessage.startsWith(testRunner.testVectorExceptionMsgPrefix))
   }
 }

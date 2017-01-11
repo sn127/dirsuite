@@ -21,9 +21,9 @@ import java.nio.file.Path
 import org.scalactic.TripleEquals._
 import org.scalatest.StreamlinedXmlEquality._
 
+@SuppressWarnings(Array("org.wartremover.warts.ToString"))
 object TestComparator {
 
-  @SuppressWarnings(Array("org.wartremover.warts.ToString"))
   def txtComparator(reference: Path, output: Path): Boolean = {
     // TODO: Scala-ARM, and io.File?
     val srcFirst = scala.io.Source.fromFile(output.toString)
@@ -35,7 +35,6 @@ object TestComparator {
     txtFirst === txtSecond
   }
 
-  @SuppressWarnings(Array("org.wartremover.warts.ToString"))
   def xmlComparator(reference: Path, output: Path): Boolean = {
     val xmlReference = scala.xml.XML.loadFile(reference.toString)
     val xmlOutput = scala.xml.XML.loadFile(output.toString)
@@ -43,7 +42,3 @@ object TestComparator {
     xmlReference === xmlOutput
   }
 }
-
-final case class TestVector(reference: Path, output: Path, comparator: (Path, Path) => Boolean)
-
-final case class TestCase(name: Path, cmdsAndArgs: Seq[Array[String]], testVectors: Seq[TestVector])
