@@ -24,6 +24,20 @@ import resource._
 
 import scala.collection.JavaConverters._
 
+
+sealed trait FindFilesPattern
+final case class Glob(glob: String) extends FindFilesPattern {
+  override def toString: String = {
+    "Glob(" + glob + ")"
+  }
+}
+
+final case class Regex(regex: String) extends FindFilesPattern {
+  override def toString: String = {
+    "Regex(" + regex + ")"
+  }
+}
+
 /**
  * Various filesystem and path related utilities.
  *
@@ -163,25 +177,27 @@ final case class FileUtils(filesystem: FileSystem) {
   }
 
   /**
-   * Find files which match glob, under basepath
+   * Find files which match pattern, under basepath
+   * Pattern could be either Glob or Regex
+   * TODO: LINK
    *
-   * @param basepath find files under this path
-   * @param glob     to match files (java.regex syntax)
-   * @return sequence of files
+   * @param basepath
+   * @param pattern
+   * @return sequence of paths which matched pattern
    */
-  def globFindFiles(basepath: Path, glob: String): Seq[Path] = {
-    findFiles(basepath, "glob:" + glob)
-  }
+  def findFiles(basepath: Path, pattern: FindFilesPattern): Seq[Path] = {
+    val canonicalBasepath = getCanonicalPath(basepath)
 
-  /**
-   * Find files which match regex, under basepath
-   *
-   * @param basepath find files under this path
-   * @param regex    to match files (java.regex syntax)
-   * @return sequence of files
-   */
-  def regexFindFiles(basepath: Path, regex: String): Seq[Path] = {
-    findFiles(basepath, "regex:" + regex)
+    val cooked =
+      pattern match {
+        case glob: Glob =>
+          basepathGlob("glob:" + glob.glob, canonicalBasepath)
+        case regex: Regex =>
+          basepathRegex("regex:" + regex.regex, canonicalBasepath)
+      }
+
+    val matcher = filesystem.getPathMatcher(cooked)
+    matcherFindFiles(canonicalBasepath, matcher)
   }
 
   protected def listDirectory(dir: Path): Seq[Path] = {
@@ -202,23 +218,23 @@ final case class FileUtils(filesystem: FileSystem) {
     }
   }
 
+
+  protected def fsEntryMapper(entry: Path): Seq[Path] ={
+    if (Files.isRegularFile(entry)) {
+      List(entry)
+    } else if (Files.isDirectory(entry)) {
+      // In theory, this can blow up your stack, but in practice, it won't.
+      // To do that, there would have to be very deep directory structure.
+      listDirTree(entry)
+    } else {
+      // Devices etc. (LINKS! - not supported at the moment)
+      Nil
+    }
+  }
+
   protected def listDirTree(dir: Path): Seq[Path] = {
-    Option(listDirectory(dir)) match {
-      case Some(entries) => {
-        entries.flatMap { entry =>
-          if (Files.isRegularFile(entry)) {
-            List(entry)
-          } else if (Files.isDirectory(entry)) {
-            // In theory, this can blow up your stack, but in practice, it won't.
-            // To do that, there would have to be very deep directory structure.
-            listDirTree(entry)
-          } else {
-            // Devices etc.
-            Nil
-          }
-        }
-      }
-      case None => Nil
+    listDirectory(dir).flatMap { entry =>
+        fsEntryMapper(entry)
     }
   }
 
@@ -272,18 +288,5 @@ final case class FileUtils(filesystem: FileSystem) {
     listDirTree(canonicalBasepath)
       .filter(f => matcher.matches(f))
       .sortBy(f => f.toString)
-  }
-
-  protected def findFiles(basepath: Path, wildcard: String): Seq[Path] = {
-    val canonicalBasepath = getCanonicalPath(basepath)
-
-    val cooked = if (wildcard.startsWith("regex:")) {
-      basepathRegex(wildcard, canonicalBasepath)
-    } else {
-      basepathGlob(wildcard, canonicalBasepath)
-    }
-
-    val matcher = filesystem.getPathMatcher(cooked)
-    matcherFindFiles(canonicalBasepath, matcher)
   }
 }

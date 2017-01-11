@@ -21,6 +21,16 @@ import java.nio.file.{FileSystems, Path, Paths}
 import org.scalatest.PrivateMethodTester.PrivateMethod
 import org.scalatest.{FlatSpec, Inside, Matchers, PrivateMethodTester}
 
+class FindFilesPatternTest extends FlatSpec with Matchers with Inside with PrivateMethodTester {
+
+  "Glob" should "toString" in {
+    Glob("/**/a.txt").toString should be ("Glob(/**/a.txt)")
+  }
+  "Regex" should "toString" in {
+    Regex(".*/a\\.txt").toString should be ("Regex(.*/a\\.txt)")
+  }
+}
+
 @SuppressWarnings(Array(
   "org.wartremover.warts.ToString",
   "org.wartremover.warts.NonUnitStatements"))
@@ -146,6 +156,35 @@ class BasepathRegexTest extends FlatSpec with Matchers with Inside with PrivateM
 }
 
 @SuppressWarnings(Array(
+  "org.wartremover.warts.ToString"))
+class SpecialFindFilesTest extends FlatSpec with Matchers with Inside with PrivateMethodTester {
+  val testDirPath = Paths.get("tests/globtree").toAbsolutePath.normalize()
+  val fu = FileUtils(testDirPath.getFileSystem)
+  val fsEntryMapper = PrivateMethod[FileUtils]('fsEntryMapper)
+
+  "fsEntryMapper" should "do /dev/null" in {
+    val fsEntryMapper = PrivateMethod[FileUtils]('fsEntryMapper)
+    val devNull = fu.getPath("/dev/null")
+
+    fu invokePrivate fsEntryMapper(devNull) should equal(Seq[Path]())
+  }
+
+  it should "do regular file" in {
+    val fsEntryMapper = PrivateMethod[FileUtils]('fsEntryMapper)
+    val one_txt = fu.getPath(testDirPath.toString, "one.txt")
+
+    fu invokePrivate fsEntryMapper(one_txt) should equal(Seq[Path](one_txt))
+  }
+
+  "findFiles" should "do empty directories" in {
+    val empty = fu.getPath(testDirPath.toString, "empty")
+    val paths = fu.findFiles(empty, Regex(".*"))
+
+    paths.isEmpty should be(true)
+  }
+}
+
+@SuppressWarnings(Array(
   "org.wartremover.warts.ToString",
   "org.wartremover.warts.NonUnitStatements",
   "org.wartremover.warts.Equals"))
@@ -189,7 +228,7 @@ class WildcardInputTest extends FlatSpec with Matchers with Inside {
     val refPaths = Seq(
       "one.txt")
 
-    val paths = fu.globFindFiles(testDirPath, "one.txt")
+    val paths = fu.findFiles(testDirPath, Glob("one.txt"))
 
     verify(paths, refPaths, testDirPath) should be(true)
   }
@@ -198,7 +237,7 @@ class WildcardInputTest extends FlatSpec with Matchers with Inside {
     val refPaths = Seq(
       "a/a.txt")
 
-    val paths = fu.globFindFiles(testDirPath, "a/a.txt")
+    val paths = fu.findFiles(testDirPath, Glob("a/a.txt"))
 
     verify(paths, refPaths, testDirPath) should be(true)
   }
@@ -209,7 +248,7 @@ class WildcardInputTest extends FlatSpec with Matchers with Inside {
       "two.txt",
       "three.txt")
 
-    val paths = fu.globFindFiles(testDirPath, "**/globtree/*.txt")
+    val paths = fu.findFiles(testDirPath, Glob("**/globtree/*.txt"))
 
     verify(paths, refPaths, testDirPath) should be(true)
   }
@@ -219,7 +258,7 @@ class WildcardInputTest extends FlatSpec with Matchers with Inside {
       "a/a.txt",
       "a/x.txt")
 
-    val paths = fu.globFindFiles(testDirPath, "a/*.txt")
+    val paths = fu.findFiles(testDirPath, Glob("a/*.txt"))
 
     verify(paths, refPaths, testDirPath) should be(true)
   }
@@ -230,7 +269,7 @@ class WildcardInputTest extends FlatSpec with Matchers with Inside {
       "a/a.txt",
       "a/x.txt")
 
-    val paths = fu.globFindFiles(testDirPath, "a/*.txt")
+    val paths = fu.findFiles(testDirPath, Glob("a/*.txt"))
 
     verify(paths, refPaths, testDirPath) should be(true)
   }
@@ -240,7 +279,7 @@ class WildcardInputTest extends FlatSpec with Matchers with Inside {
       "a/x.txt",
       "c/x.txt")
 
-    val paths = fu.globFindFiles(testDirPath, "**/globtree/*/x.txt")
+    val paths = fu.findFiles(testDirPath, Glob("**/globtree/*/x.txt"))
 
     verify(paths, refPaths, testDirPath) should be(true)
   }
@@ -253,7 +292,7 @@ class WildcardInputTest extends FlatSpec with Matchers with Inside {
       "c/x.txt",
       "b/b.txt")
 
-    val paths = fu.globFindFiles(testDirPath, "**/globtree/*/*.txt")
+    val paths = fu.findFiles(testDirPath, Glob("**/globtree/*/*.txt"))
 
     verify(paths, refPaths, testDirPath) should be(true)
   }
@@ -264,7 +303,7 @@ class WildcardInputTest extends FlatSpec with Matchers with Inside {
       "a/x.txt",
       "c/x.txt")
 
-    val paths = fu.globFindFiles(testDirPath, "**/globtree/**/x.txt")
+    val paths = fu.findFiles(testDirPath, Glob("**/globtree/**/x.txt"))
 
     verify(paths, refPaths, testDirPath) should be(true)
   }
@@ -280,7 +319,7 @@ class WildcardInputTest extends FlatSpec with Matchers with Inside {
       "b/b.txt",
       "b/a/ba.txt")
 
-    val paths = fu.globFindFiles(testDirPath, "**/globtree/**/*.txt")
+    val paths = fu.findFiles(testDirPath, Glob("**/globtree/**/*.txt"))
 
     verify(paths, refPaths, testDirPath) should be(true)
   }
@@ -301,7 +340,7 @@ class WildcardInputTest extends FlatSpec with Matchers with Inside {
       "b/a/ba.txt",
       "readme.md")
 
-    val paths = fu.globFindFiles(testDirPath, "**/globtree/**")
+    val paths = fu.findFiles(testDirPath, Glob("**/globtree/**"))
 
     verify(paths, refPaths, testDirPath) should be(true)
   }
@@ -320,7 +359,7 @@ class WildcardInputTest extends FlatSpec with Matchers with Inside {
       "b/b.txt",
       "b/a/ba.txt")
 
-    val paths = fu.regexFindFiles(testDirPath, ".*/.*\\.txt")
+    val paths = fu.findFiles(testDirPath, Regex(".*/.*\\.txt"))
 
     verify(paths, refPaths, testDirPath) should be(true)
   }
@@ -333,7 +372,7 @@ class WildcardInputTest extends FlatSpec with Matchers with Inside {
       "a/a2/a2.txt",
       "a/a2/x.txt")
 
-    val paths = fu.regexFindFiles(testDirPath, "a/.*\\.txt")
+    val paths = fu.findFiles(testDirPath, Regex("a/.*\\.txt"))
 
     verify(paths, refPaths, testDirPath) should be(true)
   }
