@@ -24,7 +24,7 @@ import org.scalatest.StreamlinedXmlEquality._
 @SuppressWarnings(Array("org.wartremover.warts.ToString"))
 object TestComparator {
 
-  def txtComparator(reference: Path, output: Path): Boolean = {
+  def txtComparator(reference: Path, output: Path): Option[String] = {
     // TODO: Scala-ARM, and io.File?
     val srcFirst = scala.io.Source.fromFile(output.toString)
     val txtFirst = try srcFirst.getLines mkString "\n" finally srcFirst.close()
@@ -32,13 +32,21 @@ object TestComparator {
     val srcSecond = scala.io.Source.fromFile(reference.toString)
     val txtSecond = try srcSecond.getLines mkString "\n" finally srcSecond.close()
 
-    txtFirst === txtSecond
+    if (txtFirst === txtSecond) {
+      None
+    } else {
+      Some("test vectors are different")
+    }
   }
 
-  def xmlComparator(reference: Path, output: Path): Boolean = {
+  def xmlComparator(reference: Path, output: Path): Option[String] = {
     val xmlReference = scala.xml.XML.loadFile(reference.toString)
     val xmlOutput = scala.xml.XML.loadFile(output.toString)
 
-    xmlReference === xmlOutput
+    if (xmlReference === xmlOutput) {
+      None
+    } else {
+      Some("test vectors are different")
+    }
   }
 }

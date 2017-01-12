@@ -18,6 +18,8 @@ package fi.sn127.utils.testing
 
 import java.nio.file.Path
 
+import org.scalatest.FunSuiteLike
+import org.scalatest.exceptions.TestFailedException
 import resource._
 
 import fi.sn127.utils.fs.{FileUtils, FindFilesPattern, Glob}
@@ -25,20 +27,9 @@ import fi.sn127.utils.fs.{FileUtils, FindFilesPattern, Glob}
 @SuppressWarnings(Array(
   "org.wartremover.warts.Null",
   "org.wartremover.warts.DefaultArguments"))
-class TestRunnerException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause) {}
-
-@SuppressWarnings(Array(
-  "org.wartremover.warts.Null",
-  "org.wartremover.warts.DefaultArguments"))
-class ExecutionException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause) {}
-
-@SuppressWarnings(Array(
-  "org.wartremover.warts.Null",
-  "org.wartremover.warts.DefaultArguments"))
 class TestVectorException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause) {}
 
-
-final case class TestVector(reference: Path, output: Path, comparator: (Path, Path) => Boolean)
+final case class TestVector(reference: Path, output: Path, comparator: (Path, Path) => Option[String])
 
 @SuppressWarnings(Array("org.wartremover.warts.ToString"))
 final case class TestCase(cmds: Path, cmdsAndArgs: Seq[Array[String]], testVectors: Seq[TestVector]){
@@ -49,7 +40,7 @@ final case class TestCase(cmds: Path, cmdsAndArgs: Seq[Array[String]], testVecto
 @SuppressWarnings(Array(
   "org.wartremover.warts.ToString",
   "org.wartremover.warts.NonUnitStatements"))
-trait TestRunnerLike {
+trait TestRunnerLike extends FunSuiteLike {
 
   val executionFailureMsgPrefix = "TEST FAILED WITH UNEXPECTED EXECUTION RESULT!"
   val testVectorFailureMsgPrefix = "TEST FAILED WITH UNEXPECTED TEST VECTOR RESULT!"
@@ -71,22 +62,26 @@ trait TestRunnerLike {
     args
   }
 
-  def findReferences(testdir: Path, testname: Path) : Seq[Path] = {
+  def findReferences(testdir: Path, testname: Path): Seq[Path] = {
     val fu = FileUtils(testdir.getFileSystem)
-    val basename = fu.getBasename(testname) match {case (name, ext) => name}
+    val basename = fu.getBasename(testname) match {
+      case (name, ext) => name
+    }
 
     fu.findFiles(testdir, Glob(basename + ".ref.*"))
   }
 
   def getOutput(testdir: Path, testname: Path, reference: Path): Path = {
     val fu = FileUtils(testdir.getFileSystem)
-    val basename = fu.getBasename(testname) match {case (name, ext) => name}
+    val basename = fu.getBasename(testname) match {
+      case (name, ext) => name
+    }
 
     val output = "out." + basename + "." + reference.getFileName.toString.stripPrefix(basename + ".ref.")
     fu.getPath(testdir.toString, output)
   }
 
-  def selectComparator(testname: Path, reference: Path, output: Path): ((Path, Path) => Boolean) = {
+  def selectComparator(testname: Path, reference: Path, output: Path): ((Path, Path) => Option[String]) = {
     val fu = FileUtils(testname.getFileSystem)
 
     val refExt = fu.getBasename(reference)
@@ -99,27 +94,33 @@ trait TestRunnerLike {
     }
   }
 
-  def testExecutorRegister(testPattern: FindFilesPattern, tc: TestCase, specimen: (Array[String] => Any)) = {
-    testExecutor(tc, specimen)
+  def registerDirSuiteTest(pattern: FindFilesPattern, tc: TestCase, specimen: (Array[String]) => Any) = {
+    // TODO: This function is not tested automatically at all!
+    // because it is overloaded while testing tester.
+    // Figure out how to test nested FunSuite while still
+    // running this register intact
+    registerTest(pattern.toString + " => " + tc.name.toString) {
+      testExecutor(tc, specimen)
+    }
   }
 
-  def testIgnoreRegister(dirPatter: String, cmds: Path) = {
-    ; // no-op
+  def registerIgnoredDirSuiteTest(dirPattern: String, cmdsPath: Path) = {
+    registerIgnoredTest(dirPattern + " => " + cmdsPath.toString) {}
   }
 
   def ignoreDirSuite(basedir: Path, dirPattern: FindFilesPattern)(specimen: (Array[String] => Any)) = {
     val fu = FileUtils(basedir.getFileSystem)
     val testnames = fu.findFiles(basedir, dirPattern)
 
-    testnames.foreach(test => testIgnoreRegister(dirPattern.toString, test))
+    testnames.foreach(test => registerIgnoredDirSuiteTest(dirPattern.toString, test))
   }
 
   /**
    * This function should catch all exceptions which are potentially thrown by specimen
    *
-   * @param basedir    name of dir which holds test dirs
+   * @param basedir     name of dir which holds test dirs
    * @param testPattern pattern of name of test names
-   * @param specimen   returns false if execution failed
+   * @param specimen    returns false if execution failed
    */
   def runDirSuite(basedir: Path, testPattern: FindFilesPattern)(specimen: (Array[String] => Any)) = {
     val fu = FileUtils(basedir.getFileSystem)
@@ -143,69 +144,76 @@ trait TestRunnerLike {
     })
 
     for (tc <- testCases) {
-      testExecutorRegister(testPattern, tc, specimen)
+      registerDirSuiteTest(testPattern, tc, specimen)
     }
   }
 
   @SuppressWarnings(Array(
     "org.wartremover.warts.Any"))
   def testExecutor(tc: TestCase, specimen: (Array[String] => Any)) = {
+
     def cmdsAndArgsStr(prefix: String): String = {
-      tc.cmdsAndArgs.map((cmds: Array[String]) => {
-        prefix + "[" + cmds.mkString("", ",", "") + "]"
-      }).mkString("\n")
+      tc.cmdsAndArgs.zipWithIndex
+        .map({ case (args, idx) =>
+          prefix + " %d:".format(idx) + " [" + args.mkString("", ",", "") + "]"
+        }).mkString("\n")
     }
 
-    for (args <- tc.cmdsAndArgs) {
-      def execFailMsg = {
-        executionFailureMsgPrefix + "\n" +
-          "   name: " + tc.name.toString + "]\n" +
-          "   with execution sequence:\n" +
-          cmdsAndArgsStr(" " * 6 + "exec: ") + "\n" +
-          "   actual failed execution is: \n" +
-          args.mkString(" " * 6 + "exec: [", ",", "]") + "\n"
-      }
-
-      try {
-        val v = specimen(argsFeeder(tc.cmds, args))
-      } catch {
-        case ex: Exception =>
-          throw new ExecutionException(execFailMsg +
-            " " * 3 + "Exception: \n" +
-            " " * 6 + "message: " + ex.getMessage + "\n")
-            //, ex)
-      }
-    }
-    for (testVector <- tc.testVectors) {
-      def makeComparatorErrMsg(prefix: String) = {
-        prefix + "\n" +
-          "   with name: " + tc.name.toString + "]\n" +
-          "   with execution sequence:\n" +
-          cmdsAndArgsStr(" " * 6 + "exec: ") + "\n" +
-          "   failed test vector (output) after successful executions is: \n" +
-          "     reference: [" + testVector.reference.toString + "]\n" +
-          "     output:    [" + testVector.output.toString + "]\n"
-      }
-
-      val compErrorMsg = try {
-        val same = testVector.comparator(testVector.output, testVector.reference)
-        if (same) {
-          None
-        } else {
-          Some(makeComparatorErrMsg(testVectorFailureMsgPrefix))
+    tc.cmdsAndArgs.zipWithIndex.foreach({
+      case (args, index) =>
+        def execFailMsg(idx: Int) = {
+          executionFailureMsgPrefix + "\n" +
+            "   name: " + tc.name.toString + "]\n" +
+            "   with execution sequence:\n" +
+            cmdsAndArgsStr(" " * 6 + "exec") + "\n" +
+            "   actual failed execution is: \n" +
+            args.mkString(" " * 6 + "exec " + "%d:".format(idx) + " [", ",", "]") + "\n"
         }
-      } catch {
-        case ex: Exception =>
-          Some(
-            makeComparatorErrMsg(testVectorExceptionMsgPrefix) + "\n" +
-              "Exception: \n" +
-              "   message: " + ex.getMessage + "\n"
-          )
-      }
-      // NOTE: Collect all comp results, and report all end results together (Cats ...)?
-      if (compErrorMsg.nonEmpty) {
-        throw  new TestVectorException(compErrorMsg.getOrElse("Internal error in test framework (ex)!"))
-      }
-    }
+
+        try {
+          val v = specimen(argsFeeder(tc.cmds, args))
+        } catch {
+          case tfe: TestFailedException =>
+            throw tfe.modifyMessage(origMsg => {
+              Option("" +
+                execFailMsg(index) +
+                " " * 3 + "Failed result: \n" +
+                " " * 6 + origMsg.getOrElse("") + "\n")
+            })
+        }
+        for (testVector <- tc.testVectors) {
+          def makeComparatorErrMsg(prefix: String) = {
+            prefix + "\n" +
+              "   with name: [" + tc.name.toString + "]\n" +
+              "   with execution sequence:\n" +
+              cmdsAndArgsStr(" " * 6 + "exec") + "\n" +
+              "   failed test vector (output) after successful executions is: \n" +
+              "     reference: [" + testVector.reference.toString + "]\n" +
+              "     output:    [" + testVector.output.toString + "]"
+          }
+          val compErrorMsg = try {
+            testVector.comparator(testVector.output, testVector.reference) match {
+              case None =>
+                None
+              case Some(cmpMsg) => Some(
+                makeComparatorErrMsg(testVectorFailureMsgPrefix) + "\n" +
+                  "Comparator: \n" +
+                  "   msg: " + cmpMsg + "\n"
+              )
+            }
+          } catch {
+            case ex: Exception => Some(
+                makeComparatorErrMsg(testVectorExceptionMsgPrefix) + "\n" +
+                  "Exception: \n" +
+                  "   cause: " + ex.getClass.getCanonicalName + "\n" +
+                  "   msg: " + ex.getMessage + "\n"
+              )
+          }
+          // NOTE: Collect all comp results, and report all end results together (Cats ...)?
+          if (compErrorMsg.nonEmpty) {
+            throw new TestVectorException(compErrorMsg.getOrElse("Internal error in test framework (ex)!"))
+          }
+        }
+    })
   }
 }

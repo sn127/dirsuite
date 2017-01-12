@@ -17,14 +17,23 @@
 package fi.sn127.utils.testing
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.{FileSystems, Files}
+import java.nio.file.{FileSystems, Files, Path}
 
+import org.scalatest.exceptions.TestFailedException
 import org.scalatest.{FlatSpec, Inside, Matchers}
 
-import fi.sn127.utils.fs.{FileUtils, Glob, Regex}
+import fi.sn127.utils.fs.{FileUtils, FindFilesPattern, Glob, Regex}
 
 class TestRunner extends TestRunnerLike {
+  override
+  def registerDirSuiteTest(pattern: FindFilesPattern, tc: TestCase, specimen: (Array[String]) => Any) = {
+      testExecutor(tc, specimen)
+  }
 
+  override
+  def registerIgnoredDirSuiteTest(dirPattern: String, cmdsPath: Path) = {
+    ;
+  }
 }
 
 @SuppressWarnings(Array("org.wartremover.warts.Var",
@@ -164,7 +173,7 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
   }
 
   it must "detect plain execution errors" in {
-    val ex = intercept[ExecutionException] {
+    val ex = intercept[TestFailedException] {
       testRunner.runDirSuite(testdir, Regex("failure/tr[0-9]+\\.cmds")) { args: Array[String] =>
         assert(DummyApp.SUCCESS == DummyApp.mainFail(args))
       }
@@ -173,7 +182,7 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
   }
 
   it must "detect plain execution errors with assertResult and interceptor" in {
-    val ex = intercept[ExecutionException] {
+    val ex = intercept[TestFailedException] {
       testRunner.runDirSuite(testdir, Regex("failure/tr[0-9]+\\.cmds")) { args: Array[String] =>
         assertResult(DummyApp.SUCCESS) {
           DummyApp.mainFail(args)

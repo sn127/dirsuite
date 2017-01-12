@@ -21,20 +21,7 @@ object DummyApp {
 
 @SuppressWarnings(Array(
   "org.wartremover.warts.ToString"))
-class TestRunnerDemo extends TestRunnerLike with FunSpecLike with Matchers with Inside {
-
-  override
-  def testExecutorRegister(pattern: FindFilesPattern, tc: TestCase, specimen: (Array[String]) => Any) = {
-    registerTest(pattern.toString + " => " + tc.name.toString) {
-      testExecutor(tc, specimen)
-    }
-  }
-
-  override
-  def testIgnoreRegister(dirPattern: String, cmdsPath: Path) = {
-    registerIgnoredTest(dirPattern + " => " + cmdsPath.toString) {}
-  }
-
+class TestRunnerDemo extends TestRunnerLike  with Matchers with Inside {
 
   val filesystem = FileSystems.getDefault
   val testdir = filesystem.getPath("tests/testrunner").toAbsolutePath.normalize
