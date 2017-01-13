@@ -20,6 +20,8 @@ import java.nio.file.FileSystems
 
 import org.scalatest.{FlatSpec, Inside, Matchers}
 
+import scala.util.{Failure, Success}
+
 @SuppressWarnings(Array(
   "org.wartremover.warts.ToString",
   "org.wartremover.warts.NonUnitStatements"))
@@ -71,15 +73,17 @@ class FileUtilsTest extends FlatSpec with Matchers with Inside {
 
   behavior of "ensurePath"
   it must "find file" in {
-    fu.ensurePath(testDirPath.toString + "/one.txt") match {
-      case Some(path) => assert(path.toString === testDirPath.toString + "/one.txt")
-      case None => assert(false)
+    val one = fu.getPath(testDirPath.toString, "/one.txt")
+    fu.ensurePath(one) match {
+      case Success(path) => assert(path.toString === one.toString)
+      case Failure(_) => assert(false)
     }
   }
   it must "not find file" in {
-    fu.ensurePath(testDirPath.toString + "/it-is-not-there.txt") match {
-      case Some(path) => assert(false)
-      case None =>
+    val nowhere = fu.getPath(testDirPath.toString, "/it-is-not-there.txt")
+    fu.ensurePath(nowhere) match {
+      case Success(_) => assert(false)
+      case Failure(_) =>
     }
   }
 

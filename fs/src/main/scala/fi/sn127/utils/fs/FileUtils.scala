@@ -23,15 +23,31 @@ import java.util.regex.Pattern
 import resource._
 
 import scala.collection.JavaConverters._
+import scala.util.{Failure, Success, Try}
 
 
 sealed trait FindFilesPattern
+
+/**
+ * Glob for path matching.
+ *
+ * For syntax see:
+ * [[https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob]]
+ * @param glob string *without* "glob:"
+ */
 final case class Glob(glob: String) extends FindFilesPattern {
   override def toString: String = {
     "Glob(" + glob + ")"
   }
 }
 
+/**
+ * Regex for path matching.
+ *
+ * For syntax see:
+ * [[https://docs.oracle.com/javase/tutorial/essential/regex/index.html]]
+ * @param regex string *without* "regex:"
+ */
 final case class Regex(regex: String) extends FindFilesPattern {
   override def toString: String = {
     "Regex(" + regex + ")"
@@ -50,7 +66,7 @@ final case class FileUtils(filesystem: FileSystem) {
 
   /**
    * Converts a string path or sequence of strPaths to
-   * path. See java.nio.Filesystem.getPath
+   * path. See: java.nio.Filesystem.getPath
    *
    * @param first
    * @param more
@@ -63,17 +79,18 @@ final case class FileUtils(filesystem: FileSystem) {
   /**
    * Ensure that path exists.
    *
+   * See: java.nio.file.Path#toRealPath
+   *
    * @param path to be checked
-   * @return real path of "path" or None
+   * @return real path  or Failure(Exception)
    */
-  def ensurePath(path: String): Option[Path] = {
+  def ensurePath(path: Path): Try[Path] = {
     try {
-      Option(filesystem.getPath(path).toRealPath())
+      Success[Path](path.toRealPath())
     } catch {
-      case ex: IOException => None
+      case ex: IOException => Failure[Path](ex)
     }
   }
-
 
   /**
    * Returns exepath (\$0) of current class or jar
@@ -178,8 +195,7 @@ final case class FileUtils(filesystem: FileSystem) {
 
   /**
    * Find files which match pattern, under basepath
-   * Pattern could be either Glob or Regex
-   * TODO: LINK
+   * Pattern could be either [[Glob]] or [[Regex]]
    *
    * @param basepath
    * @param pattern

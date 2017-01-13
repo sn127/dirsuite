@@ -27,7 +27,7 @@ lazy val fs = (project in file("fs")).
   settings(commonSettings: _*).
   settings(
     name := "utils-fs",
-    version := "0.7.0",
+    version := "0.8.0",
     isSnapshot := false,
     fork in run := true,
     libraryDependencies += scalaArm,
