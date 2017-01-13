@@ -27,10 +27,10 @@ object TestComparator {
   def txtComparator(reference: Path, output: Path): Option[String] = {
     // TODO: Scala-ARM, and io.File?
     val srcFirst = scala.io.Source.fromFile(output.toString)
-    val txtFirst = try srcFirst.getLines mkString "\n" finally srcFirst.close()
+    val txtFirst = try srcFirst.mkString  finally srcFirst.close()
 
     val srcSecond = scala.io.Source.fromFile(reference.toString)
-    val txtSecond = try srcSecond.getLines mkString "\n" finally srcSecond.close()
+    val txtSecond = try srcSecond.mkString  finally srcSecond.close()
 
     if (txtFirst === txtSecond) {
       None

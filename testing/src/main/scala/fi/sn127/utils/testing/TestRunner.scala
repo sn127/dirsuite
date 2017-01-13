@@ -22,12 +22,19 @@ import org.scalatest.FunSuiteLike
 import org.scalatest.exceptions.TestFailedException
 import resource._
 
+import scala.util.{Failure, Success}
+
 import fi.sn127.utils.fs.{FileUtils, FindFilesPattern, Glob}
+
+@SuppressWarnings(Array(
+"org.wartremover.warts.Null",
+"org.wartremover.warts.DefaultArguments"))
+class DirSuiteException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause) {}
 
 @SuppressWarnings(Array(
   "org.wartremover.warts.Null",
   "org.wartremover.warts.DefaultArguments"))
-class TestVectorException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause) {}
+class TestVectorException(msg: String, cause: Throwable = null) extends DirSuiteException(msg, cause)
 
 final case class TestVector(reference: Path, output: Path, comparator: (Path, Path) => Option[String])
 
@@ -36,15 +43,17 @@ final case class TestCase(cmds: Path, cmdsAndArgs: Seq[Array[String]], testVecto
   val name: String = cmds.toString
 }
 
+object TestRunnerLike {
+  val executionFailureMsgPrefix = "TEST FAILED WITH UNEXPECTED EXECUTION RESULT!"
+  val testVectorFailureMsgPrefix = "TEST FAILED WITH UNEXPECTED TEST VECTOR RESULT!"
+  val testVectorExceptionMsgPrefix = "TEST FAILED WITH EXCEPTION WHILE COMPARING TEST VECTORS!"
+}
 
 @SuppressWarnings(Array(
   "org.wartremover.warts.ToString",
   "org.wartremover.warts.NonUnitStatements"))
 trait TestRunnerLike extends FunSuiteLike {
 
-  val executionFailureMsgPrefix = "TEST FAILED WITH UNEXPECTED EXECUTION RESULT!"
-  val testVectorFailureMsgPrefix = "TEST FAILED WITH UNEXPECTED TEST VECTOR RESULT!"
-  val testVectorExceptionMsgPrefix = "TEST FAILED WITH EXCEPTION WHILE COMPARING TEST VECTORS!"
 
   def cmdsParser(cmdsPath: Path): Seq[Array[String]] = {
     // Scala-ARM: managed close
@@ -95,10 +104,6 @@ trait TestRunnerLike extends FunSuiteLike {
   }
 
   def registerDirSuiteTest(pattern: FindFilesPattern, tc: TestCase, specimen: (Array[String]) => Any) = {
-    // TODO: This function is not tested automatically at all!
-    // because it is overloaded while testing tester.
-    // Figure out how to test nested FunSuite while still
-    // running this register intact
     registerTest(pattern.toString + " => " + tc.name.toString) {
       testExecutor(tc, specimen)
     }
@@ -124,6 +129,16 @@ trait TestRunnerLike extends FunSuiteLike {
    */
   def runDirSuite(basedir: Path, testPattern: FindFilesPattern)(specimen: (Array[String] => Any)) = {
     val fu = FileUtils(basedir.getFileSystem)
+
+    fu.ensurePath(basedir) match {
+      case Success(ok) =>
+      case Failure(ex) => throw new DirSuiteException("=>\n" +
+        " " * 3 + "The basedir for DirSuite is invalid\n" +
+        " " * 6 + "basedir: [" + basedir.toString + "]\n" +
+        " " * 6 + "Exception: " + ex.getClass.getCanonicalName + "\n" +
+        " " * 9 + "Msg: " + ex.getMessage + "\n"
+      )
+    }
 
     val testnames = fu.findFiles(basedir, testPattern)
 
@@ -162,7 +177,7 @@ trait TestRunnerLike extends FunSuiteLike {
     tc.cmdsAndArgs.zipWithIndex.foreach({
       case (args, index) =>
         def execFailMsg(idx: Int) = {
-          executionFailureMsgPrefix + "\n" +
+          TestRunnerLike.executionFailureMsgPrefix + "\n" +
             "   name: " + tc.name.toString + "]\n" +
             "   with execution sequence:\n" +
             cmdsAndArgsStr(" " * 6 + "exec") + "\n" +
@@ -196,14 +211,14 @@ trait TestRunnerLike extends FunSuiteLike {
               case None =>
                 None
               case Some(cmpMsg) => Some(
-                makeComparatorErrMsg(testVectorFailureMsgPrefix) + "\n" +
+                makeComparatorErrMsg(TestRunnerLike.testVectorFailureMsgPrefix) + "\n" +
                   "Comparator: \n" +
                   "   msg: " + cmpMsg + "\n"
               )
             }
           } catch {
             case ex: Exception => Some(
-                makeComparatorErrMsg(testVectorExceptionMsgPrefix) + "\n" +
+                makeComparatorErrMsg(TestRunnerLike.testVectorExceptionMsgPrefix) + "\n" +
                   "Exception: \n" +
                   "   cause: " + ex.getClass.getCanonicalName + "\n" +
                   "   msg: " + ex.getMessage + "\n"
