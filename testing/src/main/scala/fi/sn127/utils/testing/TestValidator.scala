@@ -22,9 +22,9 @@ import org.scalactic.TripleEquals._
 import org.scalatest.StreamlinedXmlEquality._
 
 @SuppressWarnings(Array("org.wartremover.warts.ToString"))
-object TestComparator {
+object TestValidator {
 
-  def txtComparator(reference: Path, output: Path): Option[String] = {
+  def txtValidator(testname: Path, reference: Path, output: Path): Option[String] = {
     // TODO: Scala-ARM, and io.File?
     val srcFirst = scala.io.Source.fromFile(output.toString)
     val txtFirst = try srcFirst.mkString  finally srcFirst.close()
@@ -39,7 +39,7 @@ object TestComparator {
     }
   }
 
-  def xmlComparator(reference: Path, output: Path): Option[String] = {
+  def xmlValidator(testname: Path, reference: Path, output: Path): Option[String] = {
     val xmlReference = scala.xml.XML.loadFile(reference.toString)
     val xmlOutput = scala.xml.XML.loadFile(output.toString)
 

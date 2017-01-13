@@ -36,11 +36,41 @@ class DirSuiteException(msg: String, cause: Throwable = null) extends RuntimeExc
   "org.wartremover.warts.DefaultArguments"))
 class TestVectorException(msg: String, cause: Throwable = null) extends DirSuiteException(msg, cause)
 
-final case class TestVector(reference: Path, output: Path, comparator: (Path, Path) => Option[String])
+
+final case class TestVector(reference: Path, output: Path, validator: (Path, Path, Path) => Option[String]) {
+
+  @SuppressWarnings(Array("org.wartremover.warts.ToString"))
+  def makeComparatorErrMsg(prefix: String, tc: TestCase) = {
+    prefix + "\n" +
+      "   with name: [" + tc.name + "]\n" +
+      "   with execution sequence:\n" +
+      tc.execsStr(" " * 6 + "exec") + "\n" +
+      "   failed test vector (output) after successful executions is: \n" +
+      "     reference: [" + reference.toString + "]\n" +
+      "     output:    [" + output.toString + "]"
+  }
+}
 
 @SuppressWarnings(Array("org.wartremover.warts.ToString"))
-final case class TestCase(cmds: Path, cmdsAndArgs: Seq[Array[String]], testVectors: Seq[TestVector]){
-  val name: String = cmds.toString
+final case class TestCase(testname: Path, execs: Seq[Array[String]], testVectors: Seq[TestVector]){
+  val name: String = testname.toString
+  val testPath = testname
+
+  def execsStr(prefix: String): String = {
+    execs.zipWithIndex
+      .map({ case (args, idx) =>
+        prefix + " %d:".format(idx) + " [" + args.mkString("", ",", "") + "]"
+      }).mkString("\n")
+  }
+
+  def execFailMsg(prefix: String, idx: Int, realArgs: Array[String]) = {
+    prefix + "\n" +
+      "   name: " + name + "]\n" +
+      "   with execution sequence:\n" +
+      execsStr(" " * 6 + "exec") + "\n" +
+      "   actual failed execution is: \n" +
+      realArgs.mkString(" " * 6 + "exec " + "%d:".format(idx) + " [", ",", "]") + "\n"
+  }
 }
 
 object TestRunnerLike {
@@ -55,23 +85,23 @@ object TestRunnerLike {
 trait TestRunnerLike extends FunSuiteLike {
 
 
-  def cmdsParser(cmdsPath: Path): Seq[Array[String]] = {
+  protected def execParser(testname: Path): Seq[Array[String]] = {
     // Scala-ARM: managed close
-    managed(io.Source.fromFile(cmdsPath.toString)).map(source => {
-      val cmdLines = source.getLines.map(str => str.trim).toList
-      val cmdsAndArgs = cmdLines.map(cmd => cmd.split(";"))
-      cmdsAndArgs
+    managed(io.Source.fromFile(testname.toString)).map(source => {
+      val execLines = source.getLines.map(str => str.trim).toList
+      val execs = execLines.map(cmd => cmd.split(";"))
+      execs
     }).opt match {
-      case Some(cmdsAndArgs) => cmdsAndArgs
+      case Some(execs) => execs
       case None => Seq[Array[String]]()
     }
   }
 
-  def argsFeeder(testname: Path, args: Array[String]): Array[String] = {
+  protected def argsMapping(testname: Path, args: Array[String]): Array[String] = {
     args
   }
 
-  def findReferences(testdir: Path, testname: Path): Seq[Path] = {
+  protected def findReferences(testdir: Path, testname: Path): Seq[Path] = {
     val fu = FileUtils(testdir.getFileSystem)
     val basename = fu.getBasename(testname) match {
       case (name, ext) => name
@@ -80,7 +110,7 @@ trait TestRunnerLike extends FunSuiteLike {
     fu.findFiles(testdir, Glob(basename + ".ref.*"))
   }
 
-  def getOutput(testdir: Path, testname: Path, reference: Path): Path = {
+  protected def getOutput(testdir: Path, testname: Path, reference: Path): Path = {
     val fu = FileUtils(testdir.getFileSystem)
     val basename = fu.getBasename(testname) match {
       case (name, ext) => name
@@ -90,34 +120,34 @@ trait TestRunnerLike extends FunSuiteLike {
     fu.getPath(testdir.toString, output)
   }
 
-  def selectComparator(testname: Path, reference: Path, output: Path): ((Path, Path) => Option[String]) = {
+  protected def selectValidator(testname: Path, reference: Path, output: Path): ((Path, Path, Path) => Option[String]) = {
     val fu = FileUtils(testname.getFileSystem)
 
     val refExt = fu.getBasename(reference)
     refExt match {
       case (_, ext) => ext match {
-        case Some("txt") => TestComparator.txtComparator
-        case Some("xml") => TestComparator.xmlComparator
-        case _ => TestComparator.txtComparator
+        case Some("txt") => TestValidator.txtValidator
+        case Some("xml") => TestValidator.xmlValidator
+        case _ => TestValidator.txtValidator
       }
     }
   }
 
-  def registerDirSuiteTest(pattern: FindFilesPattern, tc: TestCase, specimen: (Array[String]) => Any) = {
+  protected def registerDirSuiteTest(pattern: FindFilesPattern, tc: TestCase, testFun: (Array[String]) => Any) = {
     registerTest(pattern.toString + " => " + tc.name.toString) {
-      testExecutor(tc, specimen)
+      testExecutor(tc, testFun)
     }
   }
 
-  def registerIgnoredDirSuiteTest(dirPattern: String, cmdsPath: Path) = {
-    registerIgnoredTest(dirPattern + " => " + cmdsPath.toString) {}
+  protected def registerIgnoredDirSuiteTest(pattern: FindFilesPattern, testname: Path) = {
+    registerIgnoredTest(pattern.toString + " => " + testname.toString) {}
   }
 
-  def ignoreDirSuite(basedir: Path, dirPattern: FindFilesPattern)(specimen: (Array[String] => Any)) = {
+  def ignoreDirSuite(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)) = {
     val fu = FileUtils(basedir.getFileSystem)
-    val testnames = fu.findFiles(basedir, dirPattern)
+    val testnames = fu.findFiles(basedir, testPattern)
 
-    testnames.foreach(test => registerIgnoredDirSuiteTest(dirPattern.toString, test))
+    testnames.foreach(test => registerIgnoredDirSuiteTest(testPattern, test))
   }
 
   /**
@@ -125,9 +155,9 @@ trait TestRunnerLike extends FunSuiteLike {
    *
    * @param basedir     name of dir which holds test dirs
    * @param testPattern pattern of name of test names
-   * @param specimen    returns false if execution failed
+   * @param testFun    returns false if execution failed
    */
-  def runDirSuite(basedir: Path, testPattern: FindFilesPattern)(specimen: (Array[String] => Any)) = {
+  def runDirSuite(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)) = {
     val fu = FileUtils(basedir.getFileSystem)
 
     fu.ensurePath(basedir) match {
@@ -145,80 +175,63 @@ trait TestRunnerLike extends FunSuiteLike {
     val testCases = testnames.map(testname => {
       val testdir = testname.getParent
 
-      val cmds = cmdsParser(testname)
+      val execs = execParser(testname)
 
       val testVectors = findReferences(testdir, testname)
         .map(reference => {
           val output = getOutput(testdir, testname, reference)
-          val comparator = selectComparator(testname, reference, output)
+          val comparator = selectValidator(testname, reference, output)
 
           TestVector(reference, output, comparator)
         })
 
-      TestCase(testname, cmds, testVectors)
+      TestCase(testname, execs, testVectors)
     })
 
     for (tc <- testCases) {
-      registerDirSuiteTest(testPattern, tc, specimen)
+      registerDirSuiteTest(testPattern, tc, testFun)
     }
   }
 
   @SuppressWarnings(Array(
     "org.wartremover.warts.Any"))
-  def testExecutor(tc: TestCase, specimen: (Array[String] => Any)) = {
+  protected def testExecutor(tc: TestCase, testFun: (Array[String] => Any)) = {
 
-    def cmdsAndArgsStr(prefix: String): String = {
-      tc.cmdsAndArgs.zipWithIndex
-        .map({ case (args, idx) =>
-          prefix + " %d:".format(idx) + " [" + args.mkString("", ",", "") + "]"
-        }).mkString("\n")
-    }
-
-    tc.cmdsAndArgs.zipWithIndex.foreach({
+    tc.execs.zipWithIndex.foreach({
       case (args, index) =>
-        def execFailMsg(idx: Int) = {
-          TestRunnerLike.executionFailureMsgPrefix + "\n" +
-            "   name: " + tc.name.toString + "]\n" +
-            "   with execution sequence:\n" +
-            cmdsAndArgsStr(" " * 6 + "exec") + "\n" +
-            "   actual failed execution is: \n" +
-            args.mkString(" " * 6 + "exec " + "%d:".format(idx) + " [", ",", "]") + "\n"
-        }
-
+        val execArgs = argsMapping(tc.testname, args)
         try {
-          val v = specimen(argsFeeder(tc.cmds, args))
+
+          /* this is real-deal for test run */
+          val v = testFun(execArgs)
+
         } catch {
           case tfe: TestFailedException =>
             throw tfe.modifyMessage(origMsg => {
               Option("" +
-                execFailMsg(index) +
+                tc.execFailMsg(TestRunnerLike.executionFailureMsgPrefix, index, execArgs) +
                 " " * 3 + "Failed result: \n" +
                 " " * 6 + origMsg.getOrElse("") + "\n")
             })
         }
         for (testVector <- tc.testVectors) {
-          def makeComparatorErrMsg(prefix: String) = {
-            prefix + "\n" +
-              "   with name: [" + tc.name.toString + "]\n" +
-              "   with execution sequence:\n" +
-              cmdsAndArgsStr(" " * 6 + "exec") + "\n" +
-              "   failed test vector (output) after successful executions is: \n" +
-              "     reference: [" + testVector.reference.toString + "]\n" +
-              "     output:    [" + testVector.output.toString + "]"
-          }
           val compErrorMsg = try {
-            testVector.comparator(testVector.output, testVector.reference) match {
+
+            /* this is real deal for test result validation */
+            val compResult = testVector.validator(tc.testname, testVector.reference, testVector.output)
+
+            compResult match {
               case None =>
                 None
               case Some(cmpMsg) => Some(
-                makeComparatorErrMsg(TestRunnerLike.testVectorFailureMsgPrefix) + "\n" +
+                testVector.makeComparatorErrMsg(TestRunnerLike.testVectorFailureMsgPrefix, tc) + "\n" +
                   "Comparator: \n" +
                   "   msg: " + cmpMsg + "\n"
               )
             }
           } catch {
             case ex: Exception => Some(
-                makeComparatorErrMsg(TestRunnerLike.testVectorExceptionMsgPrefix) + "\n" +
+                testVector.makeComparatorErrMsg(TestRunnerLike.testVectorExceptionMsgPrefix, tc) + "\n" +
                   "Exception: \n" +
                   "   cause: " + ex.getClass.getCanonicalName + "\n" +
                   "   msg: " + ex.getMessage + "\n"

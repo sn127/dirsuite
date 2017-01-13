@@ -19,7 +19,7 @@ object DemoProg {
 
 @SuppressWarnings(Array(
   "org.wartremover.warts.ToString"))
-class TestRunnerDemo extends TestRunnerLike {
+class DemoDirSuiteTest extends TestRunnerLike {
 
   val filesystem = FileSystems.getDefault
   val testdir = filesystem.getPath("tests/testrunner").toAbsolutePath.normalize

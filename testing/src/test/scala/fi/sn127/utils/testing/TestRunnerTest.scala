@@ -41,7 +41,7 @@ import fi.sn127.utils.fs.{FileUtils, Glob, Regex}
 @SuppressWarnings(Array("org.wartremover.warts.Var",
   "org.wartremover.warts.ToString",
   "org.wartremover.warts.NonUnitStatements"))
-class TestRunnerTest extends FlatSpec with Matchers with Inside {
+class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   val filesystem = FileSystems.getDefault
   val testdir = filesystem.getPath("tests/testrunner").toAbsolutePath.normalize
   val fu = FileUtils(filesystem)
@@ -205,10 +205,27 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
 
     assert(runCount === 2)
   }
-  it must "work globs" in {
+  it must "work with glob patterns" in {
     var runCount = 0
     class TestRunner extends TestRunnerLike {
       runDirSuite(testdir, Glob("success/noargs*.cmds")) { args: Array[String] =>
+        assertResult(0) {
+          runCount = runCount + 1
+          DummyProg.mainArgsCount(args)
+        }
+      }
+    }
+    val t = new TestRunner
+    val r = new LifeIsGoodReporter
+    t.run(None, Args(r))
+    assert(r.lifeIsGood)
+
+    assert(runCount === 2)
+  }
+  it must "work with regex patterns" in {
+    var runCount = 0
+    class TestRunner extends TestRunnerLike {
+      runDirSuite(testdir, Regex("success/noargs.*\\.cmds")) { args: Array[String] =>
         assertResult(0) {
           runCount = runCount + 1
           DummyProg.mainArgsCount(args)
@@ -307,7 +324,7 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
     assert(r.lifeIsGood)
   }
 
-  it must "detect plain execution errors with assertResult and interceptor" in {
+  it must "detect plain execution errors with assertResult" in {
     class TestRunner extends TestRunnerLike {
       runDirSuite(testdir, Regex("failure/tr[0-9]+\\.cmds")) { args: Array[String] =>
         assertResult(DummyProg.SUCCESS) {
@@ -337,7 +354,7 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
 
   it must "detect erroneous txt output" in {
     class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Regex("failure/txt[0-9]+\\.cmds")) { args: Array[String] =>
+      runDirSuite(testdir, Regex("failure/txt01\\.cmds")) { args: Array[String] =>
         assertResult(DummyProg.SUCCESS) {
           DummyProg.mainTxt(args)
         }
@@ -349,6 +366,20 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
     assert(r.lifeIsGood)
   }
 
+  ignore should "detect erroneous end-of-line txt-output" in {
+    class TestRunner extends TestRunnerLike {
+      runDirSuite(testdir, Regex("success/txt02\\.cmds")) { args: Array[String] =>
+        assertResult(DummyProg.SUCCESS) {
+          DummyProg.mainTxt(args)
+        }
+      }
+    }
+    val t = new TestRunner
+    //val r = new LifeIsGoodReporter
+    val r = new TestVectorFailureReporter
+    t.run(None, Args(r))
+    assert(r.lifeIsGood)
+  }
 
   it must "detect erroneous xml output" in {
     class TestRunner extends TestRunnerLike {
@@ -364,7 +395,7 @@ class TestRunnerTest extends FlatSpec with Matchers with Inside {
     assert(r.lifeIsGood)
   }
 
-  it must "detect and report comparator exceptions (XML SAX, JSON, etc)" in {
+  it must "detect and report validator exceptions (XML SAX, etc)" in {
     class TestRunner extends TestRunnerLike {
       runDirSuite(testdir, Regex("failure/xml-sax[0-9]+\\.cmds")) { (args: Array[String]) =>
         assertResult(DummyProg.SUCCESS) {
