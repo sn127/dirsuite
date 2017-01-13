@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017 Jani Averbach <jaa@sn127.fi>
+ * Copyright 2016-2017 Jani Averbach
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,6 @@ import fi.sn127.utils.fs.{FileUtils, Glob, Regex}
  *
  *    Hi there - Scalatest my dear friend!
  *
- *
  * Examples and "How to" for these tests has been
  * taken from Scalatest's own test suite, especially from
  * FunSuiteSuite.scala
@@ -38,12 +37,14 @@ import fi.sn127.utils.fs.{FileUtils, Glob, Regex}
  * https://github.com/scalatest/scalatest/tree/3.0.x/
  * scalatest-test/src/test/scala/org/scalatest/FunSuiteSuite.scala
  */
-@SuppressWarnings(Array("org.wartremover.warts.Var",
+@SuppressWarnings(Array(
+  "org.wartremover.warts.Var",
   "org.wartremover.warts.ToString",
   "org.wartremover.warts.NonUnitStatements"))
 class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
+
   val filesystem = FileSystems.getDefault
-  val testdir = filesystem.getPath("tests/testrunner").toAbsolutePath.normalize
+  val testdir = filesystem.getPath("tests/dirsuite").toAbsolutePath.normalize
   val fu = FileUtils(filesystem)
 
   object DummyProg {
@@ -124,10 +125,10 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   }
 
   class TestVectorFailureReporter extends FailureReporter {
-    def isThisGood(ex: Throwable, msg: String) = {
+    def isThisGood(ex: Throwable, msg: String): Boolean = {
       ex match {
         case tvex: TestVectorException =>
-          msg.startsWith(TestRunnerLike.testVectorFailureMsgPrefix)
+          msg.startsWith(DirSuiteLike.testVectorFailureMsgPrefix)
         case _ =>
           false
       }
@@ -136,10 +137,10 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
 
 
   class TestVectorExceptionReporter extends FailureReporter {
-    def isThisGood(ex: Throwable, msg: String) = {
+    def isThisGood(ex: Throwable, msg: String): Boolean = {
       ex match {
         case tvex: TestVectorException =>
-          msg.startsWith(TestRunnerLike.testVectorExceptionMsgPrefix)
+          msg.startsWith(DirSuiteLike.testVectorExceptionMsgPrefix)
         case _ =>
           false
       }
@@ -147,10 +148,10 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   }
 
   class ExecutionExceptionReporter extends FailureReporter {
-    def isThisGood(ex: Throwable, msg: String) = {
+    def isThisGood(ex: Throwable, msg: String): Boolean = {
       ex match {
         case tfe: TestFailedException =>
-          msg.startsWith(TestRunnerLike.executionFailureMsgPrefix)
+          msg.startsWith(DirSuiteLike.executionFailureMsgPrefix)
         case _ =>
           false
       }
@@ -158,7 +159,7 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   }
 
   class AssertionErrorReporter extends FailureReporter {
-    def isThisGood(ex: Throwable, msg: String) = {
+    def isThisGood(ex: Throwable, msg: String): Boolean = {
       ex match {
         case tfe: java.lang.AssertionError =>
           msg.startsWith("assertion failed")
@@ -170,16 +171,17 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
 
   behavior of "ignoreDirSuite"
   it must "ignore files" in {
+    // TODO: Check somehow how many files/tests this actually ignored
     var runCount = 0
-    class TestRunner extends TestRunnerLike {
-      ignoreDirSuite(testdir, Regex("success/tr[0-9]+\\.cmds")) { args: Array[String] =>
+    class DirSuite extends DirSuiteLike {
+      ignoreDirSuite(testdir, Regex("success/tr[0-9]+\\.exec")) { args: Array[String] =>
         assertResult(4) {
           runCount = runCount + 1
           DummyProg.mainArgsCount(args)
         }
       }
     }
-    val t = new TestRunner
+    val t = new DirSuite
     val r = new LifeIsGoodReporter
     t.run(None, Args(r))
     assert(r.lifeIsGood)
@@ -188,10 +190,10 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   }
 
   behavior of "runDirSuite"
-  it must "work with empty execution args cmds file (e.g. rows of plain ';'s)" in {
+  it must "work with empty exec file (e.g. only rows of plain ';'s)" in {
     var runCount = 0
-    class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Regex("success/noargs[0-9]+\\.cmds")) { args: Array[String] =>
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Regex("success/noargs[0-9]+\\.exec")) { args: Array[String] =>
         assertResult(0) {
           runCount = runCount + 1
           DummyProg.mainArgsCount(args)
@@ -207,8 +209,8 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   }
   it must "work with glob patterns" in {
     var runCount = 0
-    class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Glob("success/noargs*.cmds")) { args: Array[String] =>
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Glob("success/noargs*.exec")) { args: Array[String] =>
         assertResult(0) {
           runCount = runCount + 1
           DummyProg.mainArgsCount(args)
@@ -224,8 +226,8 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   }
   it must "work with regex patterns" in {
     var runCount = 0
-    class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Regex("success/noargs.*\\.cmds")) { args: Array[String] =>
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Regex("success/noargs.*\\.exec")) { args: Array[String] =>
         assertResult(0) {
           runCount = runCount + 1
           DummyProg.mainArgsCount(args)
@@ -242,8 +244,8 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
 
   it must "work without output files" in {
     var runCount = 0
-    class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Regex("success/tr[0-9]+\\.cmds")) { args: Array[String] =>
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Regex("success/tr[0-9]+\\.exec")) { args: Array[String] =>
         assertResult(4) {
           runCount = runCount + 1
           DummyProg.mainArgsCount(args)
@@ -259,8 +261,8 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   }
   it must "work with valid txt-output files" in {
     var runCount = 0
-    class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Regex("success/txt[0-9]+\\.cmds")) { args: Array[String] =>
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Regex("success/txt[0-9]+\\.exec")) { args: Array[String] =>
         assertResult(DummyProg.SUCCESS) {
           runCount = runCount + 1
           DummyProg.mainTxt(args)
@@ -272,14 +274,14 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
     t.run(None, Args(r))
     assert(r.lifeIsGood)
 
-    // two txt[0-9] cmds  files, each have one exec-row
+    // txt[0-9] => two exec  files, each have one exec-row
     assert(runCount === 2)
   }
 
   it must "work with valid xml-output files" in {
     var runCount = 0
-    class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Regex("success/xml[0-9]+\\.cmds")) { args: Array[String] =>
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Regex("success/xml[0-9]+\\.exec")) { args: Array[String] =>
         assertResult(DummyProg.SUCCESS) {
           runCount = runCount + 1
           DummyProg.mainXml(args)
@@ -296,8 +298,8 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
 
   it must "work with valid xml and txt -output files at the same time" in {
     var runCount = 0
-    class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Regex("success/txtxml[0-9]+\\.cmds")) { args: Array[String] =>
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Regex("success/txtxml[0-9]+\\.exec")) { args: Array[String] =>
         assertResult(DummyProg.SUCCESS) {
           runCount = runCount + 1
           DummyProg.mainTxtXml(args)
@@ -313,8 +315,8 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   }
 
   it must "detect plain asserts" in {
-    class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Regex("failure/tr[0-9]+\\.cmds")) { args: Array[String] =>
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Regex("failure/tr[0-9]+\\.exec")) { args: Array[String] =>
          scala.Predef.assert(DummyProg.SUCCESS == DummyProg.mainFail(args))
       }
     }
@@ -325,8 +327,8 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   }
 
   it must "detect plain execution errors with assertResult" in {
-    class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Regex("failure/tr[0-9]+\\.cmds")) { args: Array[String] =>
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Regex("failure/tr[0-9]+\\.exec")) { args: Array[String] =>
         assertResult(DummyProg.SUCCESS) {
           DummyProg.mainFail(args)
         }
@@ -338,9 +340,26 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
     assert(r.lifeIsGood)
   }
 
+  it must "detect missing dirsuite-tree" in {
+    val ex = intercept[DirSuiteException] {
+      class TestRunner extends DirSuiteLike {
+        val not_there = fu.getPath(testdir.toString, "dirsuite-tree-is-not-there")
+        runDirSuite(not_there, Regex("failure/missing[0-9]+\\.exec")) { args: Array[String] =>
+          assertResult(DummyProg.SUCCESS) {
+            DummyProg.mainSuccess(args)
+          }
+        }
+      }
+      val t = new TestRunner
+      val r = new ExecutionExceptionReporter
+      t.run(None, Args(r))
+    }
+    assert(ex.getMessage.startsWith("=>"))
+  }
+
   it must "detect missing files" in {
-    class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Regex("failure/missing[0-9]+\\.cmds")) { args: Array[String] =>
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Regex("failure/missing[0-9]+\\.exec")) { args: Array[String] =>
         assertResult(DummyProg.SUCCESS) {
           DummyProg.mainSuccess(args)
         }
@@ -353,8 +372,8 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   }
 
   it must "detect erroneous txt output" in {
-    class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Regex("failure/txt01\\.cmds")) { args: Array[String] =>
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Regex("failure/txt01\\.exec")) { args: Array[String] =>
         assertResult(DummyProg.SUCCESS) {
           DummyProg.mainTxt(args)
         }
@@ -367,8 +386,8 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   }
 
   ignore should "detect erroneous end-of-line txt-output" in {
-    class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Regex("success/txt02\\.cmds")) { args: Array[String] =>
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Regex("success/txt02\\.exec")) { args: Array[String] =>
         assertResult(DummyProg.SUCCESS) {
           DummyProg.mainTxt(args)
         }
@@ -382,8 +401,8 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   }
 
   it must "detect erroneous xml output" in {
-    class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Regex("failure/xml[0-9]+\\.cmds")) { args: Array[String] =>
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Regex("failure/xml[0-9]+\\.exec")) { args: Array[String] =>
         assertResult(DummyProg.SUCCESS) {
           DummyProg.mainXml(args)
         }
@@ -396,8 +415,8 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   }
 
   it must "detect and report validator exceptions (XML SAX, etc)" in {
-    class TestRunner extends TestRunnerLike {
-      runDirSuite(testdir, Regex("failure/xml-sax[0-9]+\\.cmds")) { (args: Array[String]) =>
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Regex("failure/xml-sax[0-9]+\\.exec")) { (args: Array[String]) =>
         assertResult(DummyProg.SUCCESS) {
           DummyProg.mainXml(args)
         }

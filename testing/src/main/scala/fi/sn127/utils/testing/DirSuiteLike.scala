@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017 Jani Averbach <jaa@sn127.fi>
+ * Copyright 2016-2017 Jani Averbach
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,7 +73,7 @@ final case class TestCase(testname: Path, execs: Seq[Array[String]], testVectors
   }
 }
 
-object TestRunnerLike {
+object DirSuiteLike {
   val executionFailureMsgPrefix = "TEST FAILED WITH UNEXPECTED EXECUTION RESULT!"
   val testVectorFailureMsgPrefix = "TEST FAILED WITH UNEXPECTED TEST VECTOR RESULT!"
   val testVectorExceptionMsgPrefix = "TEST FAILED WITH EXCEPTION WHILE COMPARING TEST VECTORS!"
@@ -82,7 +82,7 @@ object TestRunnerLike {
 @SuppressWarnings(Array(
   "org.wartremover.warts.ToString",
   "org.wartremover.warts.NonUnitStatements"))
-trait TestRunnerLike extends FunSuiteLike {
+trait DirSuiteLike extends FunSuiteLike {
 
 
   protected def execParser(testname: Path): Seq[Array[String]] = {
@@ -209,7 +209,7 @@ trait TestRunnerLike extends FunSuiteLike {
           case tfe: TestFailedException =>
             throw tfe.modifyMessage(origMsg => {
               Option("" +
-                tc.execFailMsg(TestRunnerLike.executionFailureMsgPrefix, index, execArgs) +
+                tc.execFailMsg(DirSuiteLike.executionFailureMsgPrefix, index, execArgs) +
                 " " * 3 + "Failed result: \n" +
                 " " * 6 + origMsg.getOrElse("") + "\n")
             })
@@ -224,14 +224,14 @@ trait TestRunnerLike extends FunSuiteLike {
               case None =>
                 None
               case Some(cmpMsg) => Some(
-                testVector.makeComparatorErrMsg(TestRunnerLike.testVectorFailureMsgPrefix, tc) + "\n" +
+                testVector.makeComparatorErrMsg(DirSuiteLike.testVectorFailureMsgPrefix, tc) + "\n" +
                   "Comparator: \n" +
                   "   msg: " + cmpMsg + "\n"
               )
             }
           } catch {
             case ex: Exception => Some(
-                testVector.makeComparatorErrMsg(TestRunnerLike.testVectorExceptionMsgPrefix, tc) + "\n" +
+                testVector.makeComparatorErrMsg(DirSuiteLike.testVectorExceptionMsgPrefix, tc) + "\n" +
                   "Exception: \n" +
                   "   cause: " + ex.getClass.getCanonicalName + "\n" +
                   "   msg: " + ex.getMessage + "\n"
