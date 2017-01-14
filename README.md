@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/sn127/utils.svg?branch=master)](https://travis-ci.org/sn127/utils)
+[![Coverage Status](https://coveralls.io/repos/github/sn127/utils/badge.svg?branch=master)](https://coveralls.io/github/sn127/utils?branch=master)
+
 # Utils
 
  * utils-fs
