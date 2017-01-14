@@ -35,3 +35,4 @@ pomExtra in Global := {
     <url>https://github.com/sn127/utils/tree/master</url>
   </scm>
 }
+

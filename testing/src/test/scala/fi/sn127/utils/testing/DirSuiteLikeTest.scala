@@ -357,7 +357,7 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
     assert(ex.getMessage.startsWith("=>"))
   }
 
-  it must "detect missing files" in {
+  it must "detect missing output files" in {
     class TestRunner extends DirSuiteLike {
       runDirSuite(testdir, Regex("failure/missing[0-9]+\\.exec")) { args: Array[String] =>
         assertResult(DummyProg.SUCCESS) {

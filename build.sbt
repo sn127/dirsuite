@@ -1,5 +1,9 @@
 import Dependencies._
 
+/**
+ * Build settings for utils
+ */
+
 lazy val commonSettings = Seq(
   organization := "fi.sn127",
   scalaVersion := "2.12.1",
