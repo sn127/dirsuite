@@ -11,6 +11,10 @@ Contributions to the project are most welcome!
  2. Get source code
  
     `git clone https://github.com/sn127/utils.git`
+
+   Then make an empty directory for tests:
+ 
+    `mkdir -p utils/tests/globtree/empty`
  
  3. Build and test 
  
