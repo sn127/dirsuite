@@ -12,8 +12,6 @@ publishArtifact in Test := false
 
 pomIncludeRepository in Global := { _ => false }
 
-sonatypeProfileName in Global := "fi.sn127"
-
 pomExtra in Global := {
   <url>https://github.com/sn127/utils</url>
   <licenses>
