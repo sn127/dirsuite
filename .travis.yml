@@ -1,0 +1,45 @@
+###
+### SN127: Utils
+### https://github.com/sn127/utils
+###
+
+language: scala
+
+jdk: oraclejdk8
+
+scala:
+   - 2.12.1
+
+
+addons:
+  apt:
+    packages:
+      - oracle-java8-installer
+
+cache:
+  directories:
+    - $HOME/.ivy2/cache
+    - $HOME/.sbt/boot/
+
+before_cache:
+  # Tricks to avoid unnecessary cache updates
+  - find $HOME/.ivy2 -name "ivydata-*.properties" -delete
+  - find $HOME/.sbt -name "*.lock" -delete
+
+###
+### Actual build definition
+###
+
+before_script:
+  # we need an empty directory to test empty directory
+  # and because it must be empty, there can't be .keep file
+  - echo "TRAVIS DEBUG"
+  - pwd
+  - echo $HOME
+  - mkdir -p /home/travis/build/sn127/utils/tests/globtree/empty
+  - find /home/travis/build/sn127/utils/tests/dirsuite -name 'out.*' -delete
+
+
+script:
+   - sbt ++$TRAVIS_SCALA_VERSION clean coverage test coverageReport coverageAggregate
+

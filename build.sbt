@@ -23,6 +23,7 @@ lazy val commonSettings = Seq(
 lazy val utils = (project in file(".")).
   aggregate(fs, testing).
   settings(
+    isSnapshot := false,
     publish := {},
     publishLocal := {}
   )
@@ -44,7 +45,7 @@ lazy val testing = (project in file("testing")).
   settings(
     name := "utils-testing",
     version := "0.5.0",
-    isSnapshot := true,
+    isSnapshot := false,
     fork in run := true,
     libraryDependencies += scalaArm,
     libraryDependencies += scalatest
