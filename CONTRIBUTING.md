@@ -12,17 +12,21 @@ Contributions to the project are most welcome!
  
     `git clone https://github.com/sn127/utils.git`
 
-   Then make an empty directory for tests:
- 
-    `mkdir -p utils/tests/globtree/empty`
+    Then make an empty directory for tests:
+     ```
+     cd utils
+     mkdir tests/globtree/empty
+     ```
  
  3. Build and test 
  
     `sbt clean test`
  
  4. Generate test coverage reports
- 
-    `sbt clean coverageOn test coverageReport coverageAggregate`
+    ```
+    sbt clean coverage test coverageReport
+    sbt coverageAggregate
+    ```
 
  5. Explore code
     
