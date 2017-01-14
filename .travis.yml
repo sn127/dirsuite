@@ -10,7 +10,6 @@ jdk: oraclejdk8
 scala:
    - 2.12.1
 
-
 addons:
   apt:
     packages:
@@ -33,17 +32,20 @@ before_cache:
 before_script:
   # we need an empty directory to test empty directory
   # and because it must be empty, there can't be .keep file
-  - echo "TRAVIS DEBUG"
+  # We should be in: /home/travis/build/sn127/utils
+  - echo "TRAVIS BUILD DEBUG"
   - pwd
   - echo $HOME
-  - mkdir -p /home/travis/build/sn127/utils/tests/globtree/empty
-  - find /home/travis/build/sn127/utils/tests/dirsuite -name 'out.*' -delete
+  - mkdir -p tests/globtree/empty
+  - find tests/dirsuite -name 'out.*' -delete
 
 
 script:
-   - sbt ++$TRAVIS_SCALA_VERSION clean coverage test coverageReport
-   - sbt coverageAggregate
+   - sbt clean coverage test
 
 after_success:
-   - sbt coveralls
+   # coverageAggregate must be on separate step by sbt-coveralls
+   # because this is multiproject build
+   - sbt coverageReport
+   - sbt coverageAggregate coveralls
 
