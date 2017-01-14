@@ -33,7 +33,7 @@ before_cache:
 before_script:
   # we need an empty directory to test empty directory
   # and because it must be empty, there can't be .keep file
-  - mkdir -p $HOME/utils/tests/globtree/empty
+  - mkdir -p /home/travis/build/sn127/utils/tests/globtree/empty
 
 script:
    - sbt ++$TRAVIS_SCALA_VERSION clean coverage test coverageReport coverageAggregate
