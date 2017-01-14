@@ -214,34 +214,38 @@ trait DirSuiteLike extends FunSuiteLike {
                 " " * 6 + origMsg.getOrElse("") + "\n")
             })
         }
-        for (testVector <- tc.testVectors) {
-          val compErrorMsg = try {
+    })
 
-            /* this is real deal for test result validation */
-            val compResult = testVector.validator(tc.testname, testVector.reference, testVector.output)
+    /*
+     * validate test vectors
+     */
+    tc.testVectors.foreach({ testVector =>
+      val compErrorMsg = try {
 
-            compResult match {
-              case None =>
-                None
-              case Some(cmpMsg) => Some(
-                testVector.makeComparatorErrMsg(DirSuiteLike.testVectorFailureMsgPrefix, tc) + "\n" +
-                  "Comparator: \n" +
-                  "   msg: " + cmpMsg + "\n"
-              )
-            }
-          } catch {
-            case ex: Exception => Some(
-                testVector.makeComparatorErrMsg(DirSuiteLike.testVectorExceptionMsgPrefix, tc) + "\n" +
-                  "Exception: \n" +
-                  "   cause: " + ex.getClass.getCanonicalName + "\n" +
-                  "   msg: " + ex.getMessage + "\n"
-              )
-          }
-          // NOTE: Collect all comp results, and report all end results together (Cats ...)?
-          if (compErrorMsg.nonEmpty) {
-            throw new TestVectorException(compErrorMsg.getOrElse("Internal error in test framework (ex)!"))
-          }
+        /* this is real deal for test result validation */
+        val compResult = testVector.validator(tc.testname, testVector.reference, testVector.output)
+
+        compResult match {
+          case None =>
+            None
+          case Some(cmpMsg) => Some(
+            testVector.makeComparatorErrMsg(DirSuiteLike.testVectorFailureMsgPrefix, tc) + "\n" +
+              "Comparator: \n" +
+              "   msg: " + cmpMsg + "\n"
+          )
         }
+      } catch {
+        case ex: Exception => Some(
+          testVector.makeComparatorErrMsg(DirSuiteLike.testVectorExceptionMsgPrefix, tc) + "\n" +
+            "Exception: \n" +
+            "   cause: " + ex.getClass.getCanonicalName + "\n" +
+            "   msg: " + ex.getMessage + "\n"
+        )
+      }
+      // NOTE: Collect all comp results, and report all end results together (Cats ...)?
+      if (compErrorMsg.nonEmpty) {
+        throw new TestVectorException(compErrorMsg.getOrElse("Internal error in test framework (ex)!"))
+      }
     })
   }
 }

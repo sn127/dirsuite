@@ -1,0 +1,6 @@
+hello
+success/out.txt03.3rd.txt
+1
+2
+3
+world

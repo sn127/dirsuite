@@ -33,14 +33,12 @@ object DemoProg {
   }
 }
 
-@SuppressWarnings(Array(
-  "org.wartremover.warts.ToString"))
 class DemoDirSuiteTest extends DirSuite {
 
   val filesystem = FileSystems.getDefault
   val testdir = filesystem.getPath("tests/dirsuite").toAbsolutePath.normalize
 
-  runDirSuite(testdir, Regex("success/txt[0-9]+\\.exec")) { args: Array[String] =>
+  ignoreDirSuite(testdir, Regex("success/txt[0-9]+\\.exec")) { args: Array[String] =>
     assertResult(DemoProg.SUCCESS) {
       DemoProg.mainSuccess(args)
     }

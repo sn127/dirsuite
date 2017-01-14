@@ -274,8 +274,10 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
     t.run(None, Args(r))
     assert(r.lifeIsGood)
 
-    // txt[0-9] => two exec  files, each have one exec-row
-    assert(runCount === 2)
+    // txt01 => 1 exec row
+    // txt02 => 1 exec row
+    // txt03 => 3 exec rows
+    assert(runCount === 5)
   }
 
   it must "work with valid xml-output files" in {
