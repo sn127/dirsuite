@@ -3,6 +3,8 @@
 
 # Utils
 
+[![Join the chat at https://gitter.im/sn127/utils](https://badges.gitter.im/sn127/utils.svg)](https://gitter.im/sn127/utils?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
  * utils-fs
    - java.nio.{Files,Paths} path manipulating utilities
    - Recursive findFiles with glob and regex pattern
