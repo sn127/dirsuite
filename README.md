@@ -1,3 +1,4 @@
+[![Join the chat at https://gitter.im/sn127/utils](https://badges.gitter.im/sn127/utils.svg)](https://gitter.im/sn127/utils)
 [![Build Status](https://travis-ci.org/sn127/utils.svg?branch=master)](https://travis-ci.org/sn127/utils)
 [![Coverage Status](https://coveralls.io/repos/github/sn127/utils/badge.svg?branch=master)](https://coveralls.io/github/sn127/utils?branch=master)
 
