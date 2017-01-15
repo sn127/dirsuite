@@ -1,9 +1,9 @@
+[![Join the chat at https://gitter.im/sn127/utils](https://badges.gitter.im/sn127/utils.svg)](https://gitter.im/sn127/utils)
 [![Build Status](https://travis-ci.org/sn127/utils.svg?branch=master)](https://travis-ci.org/sn127/utils)
 [![Coverage Status](https://coveralls.io/repos/github/sn127/utils/badge.svg?branch=master)](https://coveralls.io/github/sn127/utils?branch=master)
 
 # Utils
 
-[![Join the chat at https://gitter.im/sn127/utils](https://badges.gitter.im/sn127/utils.svg)](https://gitter.im/sn127/utils?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
  * utils-fs
    - java.nio.{Files,Paths} path manipulating utilities
