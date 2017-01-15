@@ -4,7 +4,6 @@
 
 # Utils
 
-
  * utils-fs
    - java.nio.{Files,Paths} path manipulating utilities
    - Recursive findFiles with glob and regex pattern
