@@ -1,1 +1,2 @@
-success/out.txt02.unknown-ext.ext;1;2;3
+# format: exec
+exec:success/out.txt02.unknown-ext.ext;1;2;3;

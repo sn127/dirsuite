@@ -44,7 +44,7 @@ final case class TestVector(reference: Path, output: Path, validator: (Path, Pat
     prefix + "\n" +
       "   with name: [" + tc.name + "]\n" +
       "   with execution sequence:\n" +
-      tc.execsStr(" " * 6 + "exec") + "\n" +
+      tc.execsToString(" " * 6 + "exec") + "\n" +
       "   failed test vector (output) after successful executions is: \n" +
       "     reference: [" + reference.toString + "]\n" +
       "     output:    [" + output.toString + "]"
@@ -56,18 +56,18 @@ final case class TestCase(testname: Path, execs: Seq[Array[String]], testVectors
   val name: String = testname.toString
   val testPath = testname
 
-  def execsStr(prefix: String): String = {
+  def execsToString(prefix: String): String = {
     execs.zipWithIndex
       .map({ case (args, idx) =>
         prefix + " %d:".format(idx) + " [" + args.mkString("", ",", "") + "]"
       }).mkString("\n")
   }
 
-  def execFailMsg(prefix: String, idx: Int, realArgs: Array[String]) = {
+  def makeExecFailMsg(prefix: String, idx: Int, realArgs: Array[String]) = {
     prefix + "\n" +
       "   name: " + name + "]\n" +
       "   with execution sequence:\n" +
-      execsStr(" " * 6 + "exec") + "\n" +
+      execsToString(" " * 6 + "exec") + "\n" +
       "   actual failed execution is: \n" +
       realArgs.mkString(" " * 6 + "exec " + "%d:".format(idx) + " [", ",", "]") + "\n"
   }
@@ -85,19 +85,46 @@ object DirSuiteLike {
 trait DirSuiteLike extends FunSuiteLike {
 
 
-  protected def execParser(testname: Path): Seq[Array[String]] = {
+  protected def tokenizer(line: String): Array[String] = {
+    if (line.isEmpty) {
+      // No args-case => ok
+      Array[String]()
+    } else {
+      val rawArgs = line.split(";", -1)
+      if (rawArgs.size < 2){
+        // it was string without any ';'
+        // TODO ERROR
+      }
+      val sgrAwar = rawArgs.reverse
+      val last = sgrAwar.head
+      if (last.nonEmpty) {
+        // there is trailing stuff after last ';',
+        // so it could be missed semi-colon
+        // TODO ERROR
+      }
+      // drop "last", and return list in correct order
+      sgrAwar.drop(1).reverse
+    }
+  }
+
+  protected def parseExec(testname: Path): Seq[Array[String]] = {
+    val exexPrefix = "exec:"
     // Scala-ARM: managed close
     managed(io.Source.fromFile(testname.toString)).map(source => {
-      val execLines = source.getLines.map(str => str.trim).toList
-      val execs = execLines.map(cmd => cmd.split(";"))
-      execs
+      val execLines = source.getLines
+        .filter(!_.startsWith("#"))
+        .filter(_.startsWith(exexPrefix))
+        .map(_.stripPrefix(exexPrefix))
+        .map(str => str.trim)
+      val execs = execLines.map(tokenizer)
+      execs.toList
     }).opt match {
       case Some(execs) => execs
       case None => Seq[Array[String]]()
     }
   }
 
-  protected def argsMapping(testname: Path, args: Array[String]): Array[String] = {
+  protected def mapArgs(testname: Path, args: Array[String]): Array[String] = {
     args
   }
 
@@ -110,7 +137,7 @@ trait DirSuiteLike extends FunSuiteLike {
     fu.findFiles(testdir, Glob(basename + ".ref.*"))
   }
 
-  protected def getOutput(testdir: Path, testname: Path, reference: Path): Path = {
+  protected def mapOutput(testdir: Path, testname: Path, reference: Path): Path = {
     val fu = FileUtils(testdir.getFileSystem)
     val basename = fu.getBasename(testname) match {
       case (name, ext) => name
@@ -175,11 +202,18 @@ trait DirSuiteLike extends FunSuiteLike {
     val testCases = testnames.map(testname => {
       val testdir = testname.getParent
 
-      val execs = execParser(testname)
+      val execs = parseExec(testname)
+      if (execs.isEmpty) {
+        throw new DirSuiteException("=>\n" +
+          " " * 3 + "Exec for test is empty - there is nothing to run!\n" +
+          " " * 6 + "basedir: [" + basedir.toString + "]\n" +
+          " " * 6 + "testname: [" + testname.toString + "]\n"
+        )
+      }
 
       val testVectors = findReferences(testdir, testname)
         .map(reference => {
-          val output = getOutput(testdir, testname, reference)
+          val output = mapOutput(testdir, testname, reference)
           val comparator = selectValidator(testname, reference, output)
 
           TestVector(reference, output, comparator)
@@ -199,7 +233,7 @@ trait DirSuiteLike extends FunSuiteLike {
 
     tc.execs.zipWithIndex.foreach({
       case (args, index) =>
-        val execArgs = argsMapping(tc.testname, args)
+        val execArgs = mapArgs(tc.testname, args)
         try {
 
           /* this is real-deal for test run */
@@ -209,7 +243,7 @@ trait DirSuiteLike extends FunSuiteLike {
           case tfe: TestFailedException =>
             throw tfe.modifyMessage(origMsg => {
               Option("" +
-                tc.execFailMsg(DirSuiteLike.executionFailureMsgPrefix, index, execArgs) +
+                tc.makeExecFailMsg(DirSuiteLike.executionFailureMsgPrefix, index, execArgs) +
                 " " * 3 + "Failed result: \n" +
                 " " * 6 + origMsg.getOrElse("") + "\n")
             })

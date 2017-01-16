@@ -1,2 +1,3 @@
-this;is;SUCCESS;test;
-used;with;FAILED
+# format: exec
+exec:this;is;SUCCESS;test;
+exec:used;with;FAILED

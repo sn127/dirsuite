@@ -1,2 +1,3 @@
-multi-first;1;2;3
-multi-second;1;2;3
+# format: exec
+exec:multi-first;1;2;3;
+exec:multi-second;1;2;3;
