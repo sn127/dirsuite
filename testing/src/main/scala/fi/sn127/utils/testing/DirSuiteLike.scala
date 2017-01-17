@@ -196,6 +196,15 @@ trait DirSuiteLike extends FunSuiteLike {
 
     val testnames = fu.findFiles(basedir, testPattern)
 
+    if (testnames.isEmpty) {
+      throw new DirSuiteException("=>\n" +
+        " " * 3 + "DirSuite is empty - there are no exec-files!\n" +
+        " " * 6 + "basedir: [" + basedir.toString + "]\n" +
+        " " * 6 + "pattern: " + testPattern.toString + "\n" +
+        " " * 3 + "if this is intentional, you could ignore it"
+        )
+    }
+
     val testCases = testnames.map(testname => {
       val testdir = testname.getParent
 
@@ -245,6 +254,12 @@ trait DirSuiteLike extends FunSuiteLike {
     "org.wartremover.warts.TraversableOps"))
   protected def testExecutor(tc: TestCase, testFuns: List[(Array[String] => Any)]) = {
 
+    if (tc.execs.length < testFuns.length) {
+      throw new DirSuiteException("=>\n" +
+        " " * 3 + "Exec line count is less than test function count. This is not supported!\n" +
+        " " * 6 + "testname: " + tc.testname + "\n"
+      )
+    }
     /*
       Bake execs with testfuns
 
@@ -276,6 +291,11 @@ trait DirSuiteLike extends FunSuiteLike {
                 " " * 3 + "Failed result: \n" +
                 " " * 6 + origMsg.getOrElse("") + "\n")
             })
+          case ex: Exception =>
+            throw new DirSuiteException("" +
+              tc.makeExecFailMsg(DirSuiteLike.executionFailureMsgPrefix, index, execArgs) +
+              " " * 3 + "Failed result: \n" +
+              " " * 6 + ex.getMessage + "\n", ex)
         }
     })
 
@@ -293,16 +313,16 @@ trait DirSuiteLike extends FunSuiteLike {
             None
           case Some(cmpMsg) => Some(
             testVector.makeComparatorErrMsg(DirSuiteLike.testVectorFailureMsgPrefix, tc) + "\n" +
-              "Comparator: \n" +
-              "   msg: " + cmpMsg + "\n"
+              " " * 3 + "Comparator: \n" +
+              " " * 6 + "msg: " + cmpMsg + "\n"
           )
         }
       } catch {
         case ex: Exception => Some(
           testVector.makeComparatorErrMsg(DirSuiteLike.testVectorExceptionMsgPrefix, tc) + "\n" +
-            "Exception: \n" +
-            "   cause: " + ex.getClass.getCanonicalName + "\n" +
-            "   msg: " + ex.getMessage + "\n"
+            " " * 3 + "Exception: \n" +
+            " " * 6 + "cause: " + ex.getClass.getCanonicalName + "\n" +
+            " " * 6 + "msg: " + ex.getMessage + "\n"
         )
       }
       // NOTE: Collect all comp results, and report all end results together (Cats ...)?

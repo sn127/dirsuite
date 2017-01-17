@@ -19,7 +19,7 @@ package fi.sn127.utils.testing
 import java.nio.charset.StandardCharsets
 import java.nio.file.{FileSystems, Files}
 
-import org.scalatest.events.{Event, TestFailed}
+import org.scalatest.events.{Event, TestFailed, TestSucceeded}
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.{Args, FlatSpec, Inside, Matchers, Reporter}
 
@@ -59,6 +59,17 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
 
     def mainFail(args: Array[String]): Int = {
       FAILURE
+    }
+
+    def doFlaky(args: Array[String]): Int = {
+      if (args(0) === "bang") {
+        throw new RuntimeException("BANG!")
+      }
+      else if (args(0) === "fail") {
+        DummyProg.FAILURE
+      } else {
+        DummyProg.SUCCESS
+      }
     }
 
     def mainArgsCount(args: Array[String]): Int = {
@@ -152,11 +163,25 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
       ex match {
         case tfe: TestFailedException =>
           msg.startsWith(DirSuiteLike.executionFailureMsgPrefix)
+        case dex: DirSuiteException =>
+          msg.startsWith(DirSuiteLike.executionFailureMsgPrefix)
         case _ =>
           false
       }
     }
   }
+
+  class ExecCountExceptionReporter extends FailureReporter {
+    def isThisGood(ex: Throwable, msg: String): Boolean = {
+      ex match {
+        case dex: DirSuiteException =>
+          msg.startsWith("=>")
+        case _ =>
+          false
+      }
+    }
+  }
+
 
   class AssertionErrorReporter extends FailureReporter {
     def isThisGood(ex: Throwable, msg: String): Boolean = {
@@ -342,6 +367,22 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
     assert(r.lifeIsGood)
   }
 
+  it must "detect plain RuntimeException, and report with specialized error message" in {
+    class TestRunner extends DirSuiteLike {
+      runDirSuite(testdir, Glob("failure/multiStepEx[0-9]*.exec")) { args: Array[String] =>
+        assertResult(DummyProg.SUCCESS) {
+          DummyProg.doFlaky(args)
+        }
+      }
+    }
+    val t = new TestRunner
+    val r = new ExecutionExceptionReporter
+    t.run(None, Args(r))
+    assert(r.lifeIsGood)
+  }
+
+
+
   it must "detect missing dirsuite-tree" in {
     val ex = intercept[DirSuiteException] {
       class TestRunner extends DirSuiteLike {
@@ -357,6 +398,58 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
       t.run(None, Args(r))
     }
     assert(ex.getMessage.startsWith("=>"))
+  }
+
+  it must "detect empty dirsuite (e.g. no matching exec-files)" in {
+    val ex = intercept[DirSuiteException] {
+      class TestRunner extends DirSuiteLike {
+        runDirSuite(testdir, Glob("nothing-will-match-this")) { args: Array[String] =>
+          assertResult(DummyProg.SUCCESS) {
+            DummyProg.mainSuccess(args)
+          }
+        }
+      }
+      val t = new TestRunner
+      val r = new ExecutionExceptionReporter
+      t.run(None, Args(r))
+    }
+    assert(ex.getMessage.startsWith("=>"))
+  }
+
+  it must "detect empty exec" in {
+    val ex = intercept[DirSuiteException] {
+      class TestRunner extends DirSuiteLike {
+        runDirSuite(testdir, Glob("failure/empty[0-9]*.exec")) { args: Array[String] =>
+          assertResult(DummyProg.SUCCESS) {
+            DummyProg.mainSuccess(args)
+          }
+        }
+      }
+      val t = new TestRunner
+      val r = new ExecutionExceptionReporter
+      t.run(None, Args(r))
+    }
+    assert(ex.getMessage.startsWith("=>"))
+  }
+
+  it must "detect exec line count < g*f" in {
+      class TestRunner extends DirSuiteLike {
+        gfDirSuite(testdir, Glob("failure/single01.exec"))(
+          { args: Array[String] =>
+            assertResult(DummyProg.SUCCESS) {
+              DummyProg.mainSuccess(args)
+            }
+          },
+          { args: Array[String] =>
+            assertResult(DummyProg.SUCCESS) {
+              DummyProg.mainSuccess(args)
+            }
+          })
+      }
+    val t = new TestRunner
+    val r = new ExecCountExceptionReporter
+    t.run(None, Args(r))
+    assert(r.lifeIsGood)
   }
 
   it must "detect missing output files" in {
@@ -430,11 +523,67 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
     assert(r.lifeIsGood)
   }
 
-  ignore must "run multistep g*f test" in {
+  it must "run multistep g*f test" in {
     // normal g*f case with success
+    var rc = 0
+    class TestRunner extends DirSuiteLike {
+      gfDirSuite(testdir, Glob("success/multiStepFail[0-9]*.exec"))(
+        { args: Array[String] =>
+          rc += 1
+          /*
+           * All steps at the begin must succeed
+           */
+          assertResult(DummyProg.SUCCESS) {
+            DummyProg.doFlaky(args)
+          }
+        },
+        { args: Array[String] =>
+          rc += 300 // different space for second function
+          /*
+           * Last step must fail
+           */
+          assertResult(DummyProg.FAILURE) {
+            DummyProg.doFlaky(args)
+          }
+        }
+      )
+    }
+    val t = new TestRunner
+    val r = new LifeIsGoodReporter
+    t.run(None, Args(r))
+    assert(r.lifeIsGood)
+    assert(rc === 302)
   }
 
-  ignore must "detect multistep  g*f test failure" in {
+  it must "detect multistep  g*f test failure" in {
     // g or f fails "wrong" way
+    var rc = 0
+    class TestRunner extends DirSuiteLike {
+      gfDirSuite(testdir, Glob("success/multiStepFail[0-9]*.exec"))(
+        { args: Array[String] =>
+          rc += 1
+          /*
+           * All steps at the begin must succeed
+           */
+          assertResult(DummyProg.SUCCESS) {
+            DummyProg.mainSuccess(args)
+          }
+        },
+        { args: Array[String] =>
+          rc += 300
+          /*
+           * Last step must fail
+           */
+          assertResult(DummyProg.FAILURE) {
+            DummyProg.mainSuccess(args)
+          }
+        }
+      )
+    }
+    val t = new TestRunner
+    val r = new ExecutionExceptionReporter
+    t.run(None, Args(r))
+    assert(rc === 302, "external runcount")
+    assert(r.lifeIsGood)
   }
 }
