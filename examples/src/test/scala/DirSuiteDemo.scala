@@ -108,7 +108,7 @@ class DirSuiteDemo extends DirSuite {
    *  exec 1 => assertResult(SUCCESS)
    *  exec 2 => assertThrows[RuntimeException]
    */
-  gfDirSuite(testdir, Glob("success/multiStepEx[0-9]*.exec"))(
+  runMultiTestDirSuite(testdir, Glob("success/multiStepEx[0-9]*.exec"))(
     { args: Array[String] =>
       /*
        * All steps at the begin must succeed
@@ -135,7 +135,7 @@ class DirSuiteDemo extends DirSuite {
    *  exec 1 => assertResult(SUCCESS)
    *  exec 2 => assertResult(FAILURE)
    */
-  gfDirSuite(testdir, Glob("success/multiStepFail[0-9]*.exec"))(
+  runMultiTestDirSuite(testdir, Glob("success/multiStepFail[0-9]*.exec"))(
     { args: Array[String] =>
       /*
        * All steps at the begin must succeed

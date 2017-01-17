@@ -19,7 +19,7 @@ package fi.sn127.utils.testing
 import java.nio.charset.StandardCharsets
 import java.nio.file.{FileSystems, Files}
 
-import org.scalatest.events.{Event, TestFailed, TestSucceeded}
+import org.scalatest.events.{Event, TestFailed}
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.{Args, FlatSpec, Inside, Matchers, Reporter}
 
@@ -195,7 +195,7 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   }
 
   behavior of "ignoreDirSuite"
-  it must "ignore files" in {
+  it must "ignoreDirSuite" in {
     // TODO: Check somehow how many files/tests this actually ignored
     var runCount = 0
     class DirSuite extends DirSuiteLike {
@@ -205,6 +205,32 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
           DummyProg.mainArgsCount(args)
         }
       }
+    }
+    val t = new DirSuite
+    val r = new LifeIsGoodReporter
+    t.run(None, Args(r))
+    assert(r.lifeIsGood)
+
+    assert(runCount === 0)
+  }
+  it must "ignoreMultiStepDirSuite" in {
+    // TODO: Check somehow how many files/tests this actually ignored
+    var runCount = 0
+    class DirSuite extends DirSuiteLike {
+      ignoreMultiTestDirSuite(testdir, Regex("success/tr[0-9]+\\.exec"))(
+        { args: Array[String] =>
+          assertResult(4) {
+            runCount = runCount + 1
+            DummyProg.mainArgsCount(args)
+          }
+        }, { args: Array[String] =>
+          assertResult(4) {
+            runCount = runCount + 1
+            DummyProg.mainArgsCount(args)
+
+          }
+        }
+      )
     }
     val t = new DirSuite
     val r = new LifeIsGoodReporter
@@ -434,7 +460,7 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
 
   it must "detect exec line count < g*f" in {
       class TestRunner extends DirSuiteLike {
-        gfDirSuite(testdir, Glob("failure/single01.exec"))(
+        runMultiTestDirSuite(testdir, Glob("failure/single01.exec"))(
           { args: Array[String] =>
             assertResult(DummyProg.SUCCESS) {
               DummyProg.mainSuccess(args)
@@ -527,7 +553,7 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
     // normal g*f case with success
     var rc = 0
     class TestRunner extends DirSuiteLike {
-      gfDirSuite(testdir, Glob("success/multiStepFail[0-9]*.exec"))(
+      runMultiTestDirSuite(testdir, Glob("success/multiStepFail[0-9]*.exec"))(
         { args: Array[String] =>
           rc += 1
           /*
@@ -559,7 +585,7 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
     // g or f fails "wrong" way
     var rc = 0
     class TestRunner extends DirSuiteLike {
-      gfDirSuite(testdir, Glob("success/multiStepFail[0-9]*.exec"))(
+      runMultiTestDirSuite(testdir, Glob("success/multiStepFail[0-9]*.exec"))(
         { args: Array[String] =>
           rc += 1
           /*

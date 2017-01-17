@@ -180,6 +180,15 @@ trait DirSuiteLike extends FunSuiteLike {
 
     testnames.foreach(test => registerIgnoredDirSuiteTest(testPattern, test))
   }
+  def ignoreMultiTestDirSuite(basedir: Path, testPattern: FindFilesPattern)(
+    beginTestFun: (Array[String] => Any),
+    lastTestFun: (Array[String] => Any)) = {
+
+    val fu = FileUtils(basedir.getFileSystem)
+    val testnames = fu.findFiles(basedir, testPattern)
+
+    testnames.foreach(test => registerIgnoredDirSuiteTest(testPattern, test))
+  }
 
   def getTestcases(basedir: Path, testPattern: FindFilesPattern): Seq[TestCase] = {
     val fu = FileUtils(basedir.getFileSystem)
@@ -237,7 +246,7 @@ trait DirSuiteLike extends FunSuiteLike {
     })
   }
 
-  def gfDirSuite(basedir: Path, testPattern: FindFilesPattern)(
+  def runMultiTestDirSuite(basedir: Path, testPattern: FindFilesPattern)(
     beginTestFun: (Array[String] => Any),
     lastTestFun: (Array[String] => Any)) = {
 
