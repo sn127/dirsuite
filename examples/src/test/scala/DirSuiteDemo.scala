@@ -94,16 +94,63 @@ class DirSuiteDemo extends DirSuite {
    */
   runDirSuite(testdir, Glob("success/singleStepEx[0-9]*.exec")) { args: Array[String] =>
     assertThrows[RuntimeException]{
-      app.doException(args)
+      app.doFlaky(args)
     }
   }
 
   /**
-   * NOT SUPPORTED at the moment:
+   * First execution steps must succeed, and then
+   * Last execution step  must throw up an exception
+   * when multiple steps are run
    *
-   * last execution step  must throw up an exception if multiple steps are run
-   *
-   *  e.g. something like:
-   *  multiple assertResult(SUCCESS) + last assertThrows[RuntimeException]
+   * For example:
+   *  exec 0 => assertResult(SUCCESS)
+   *  exec 1 => assertResult(SUCCESS)
+   *  exec 2 => assertThrows[RuntimeException]
    */
+  gfDirSuite(testdir, Glob("success/multiStepEx[0-9]*.exec"))(
+    { args: Array[String] =>
+      /*
+       * All steps at the begin must succeed
+       */
+      assertResult(DemoApp.SUCCESS) {
+        app.doFlaky(args)
+      }
+    },
+    { args: Array[String] =>
+      /*
+       * Last step must fail with exception
+       */
+      assertThrows[RuntimeException] {
+        app.doFlaky(args)
+      }
+    }
+  )
+  /**
+   * First execution steps must succeed, and then
+   * Last execution step  must fail
+   *
+   * For example:
+   *  exec 0 => assertResult(SUCCESS)
+   *  exec 1 => assertResult(SUCCESS)
+   *  exec 2 => assertResult(FAILURE)
+   */
+  gfDirSuite(testdir, Glob("success/multiStepFail[0-9]*.exec"))(
+    { args: Array[String] =>
+      /*
+       * All steps at the begin must succeed
+       */
+      assertResult(DemoApp.SUCCESS) {
+        app.doFlaky(args)
+      }
+    },
+    { args: Array[String] =>
+      /*
+       * Last step must fail
+       */
+      assertResult(DemoApp.FAILURE) {
+        app.doFlaky(args)
+      }
+    }
+  )
 }

@@ -1,0 +1,4 @@
+# format: exec
+exec:1st;
+exec:2nd;
+exec:fail;

@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<hello>
+  <arg>success/out.xml02.prettyprint.xml</arg>
+  <arg>1</arg>
+  <arg>2</arg>
+</hello>
