@@ -429,4 +429,12 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
     t.run(None, Args(r))
     assert(r.lifeIsGood)
   }
+
+  ignore must "run multistep g*f test" in {
+    // normal g*f case with success
+  }
+
+  ignore must "detect multistep  g*f test failure" in {
+    // g or f fails "wrong" way
+  }
 }

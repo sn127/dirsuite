@@ -160,9 +160,13 @@ trait DirSuiteLike extends FunSuiteLike {
     }
   }
 
-  protected def registerDirSuiteTest(pattern: FindFilesPattern, tc: TestCase, testFun: (Array[String]) => Any) = {
+  protected def registerDirSuiteTest(
+    pattern: FindFilesPattern,
+    tc: TestCase,
+    testFuns: List[(Array[String]) => Any]) = {
+
     registerTest(pattern.toString + " => " + tc.name.toString) {
-      testExecutor(tc, testFun)
+      testExecutor(tc, testFuns)
     }
   }
 
@@ -177,14 +181,7 @@ trait DirSuiteLike extends FunSuiteLike {
     testnames.foreach(test => registerIgnoredDirSuiteTest(testPattern, test))
   }
 
-  /**
-   * This function should catch all exceptions which are potentially thrown by specimen
-   *
-   * @param basedir     name of dir which holds test dirs
-   * @param testPattern pattern of name of test names
-   * @param testFun    returns false if execution failed
-   */
-  def runDirSuite(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)) = {
+  def getTestcases(basedir: Path, testPattern: FindFilesPattern): Seq[TestCase] = {
     val fu = FileUtils(basedir.getFileSystem)
 
     fu.ensurePath(basedir) match {
@@ -221,23 +218,55 @@ trait DirSuiteLike extends FunSuiteLike {
 
       TestCase(testname, execs, testVectors)
     })
-
-    for (tc <- testCases) {
-      registerDirSuiteTest(testPattern, tc, testFun)
-    }
+    testCases
   }
 
-  @SuppressWarnings(Array(
-    "org.wartremover.warts.Any"))
-  protected def testExecutor(tc: TestCase, testFun: (Array[String] => Any)) = {
+  def runDirSuite(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)) = {
 
-    tc.execs.zipWithIndex.foreach({
-      case (args, index) =>
+    getTestcases(basedir, testPattern).foreach(tc => {
+      registerDirSuiteTest(testPattern, tc, List[(Array[String] => Any)](testFun))
+    })
+  }
+
+  def gfDirSuite(basedir: Path, testPattern: FindFilesPattern)(
+    beginTestFun: (Array[String] => Any),
+    lastTestFun: (Array[String] => Any)) = {
+
+    val testcases = getTestcases(basedir, testPattern)
+
+    testcases.foreach(tc => {
+      registerDirSuiteTest(testPattern, tc, List[(Array[String] => Any)](beginTestFun, lastTestFun))
+    })
+  }
+
+
+  @SuppressWarnings(Array(
+    "org.wartremover.warts.Any",
+    "org.wartremover.warts.TraversableOps"))
+  protected def testExecutor(tc: TestCase, testFuns: List[(Array[String] => Any)]) = {
+
+    /*
+      Bake execs with testfuns
+
+      val funs = List("a", "last")
+      val is = List(1, 2, 3, 4, 5)
+      is.reverse.zipAll(funs.reverse, 0, funs.head).reverse
+      res1: List[(Int, String)] = List((1,a), (2,a), (3,a), (4,a), (5,last))
+     */
+    // TODO lengths
+    val execsAndFunc: Seq[(Array[String], (Array[String]) => Any)] = tc.execs
+      .reverse
+      .zipAll(testFuns.reverse, Array[String](), testFuns.head)
+      .reverse
+
+    execsAndFunc.zipWithIndex.foreach({
+      case ((args, testFun), index) =>
+
         val execArgs = mapArgs(tc.testname, args)
         try {
 
           /* this is real-deal for test run */
-          val v = testFun(execArgs)
+          testFun(execArgs)
 
         } catch {
           case tfe: TestFailedException =>
