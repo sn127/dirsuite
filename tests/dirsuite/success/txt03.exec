@@ -1,3 +1,4 @@
-success/out.txt03.1st.txt;1
-success/out.txt03.2nd.txt;1;2
-success/out.txt03.3rd.txt;1;2;3
+# format: exec
+exec:success/out.txt03.1st.txt;1;
+exec:success/out.txt03.2nd.txt;1;2;
+exec:success/out.txt03.3rd.txt;1;2;3;

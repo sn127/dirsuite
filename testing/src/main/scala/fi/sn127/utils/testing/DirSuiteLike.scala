@@ -44,7 +44,7 @@ final case class TestVector(reference: Path, output: Path, validator: (Path, Pat
     prefix + "\n" +
       "   with name: [" + tc.name + "]\n" +
       "   with execution sequence:\n" +
-      tc.execsStr(" " * 6 + "exec") + "\n" +
+      tc.execsToString(" " * 6 + "exec") + "\n" +
       "   failed test vector (output) after successful executions is: \n" +
       "     reference: [" + reference.toString + "]\n" +
       "     output:    [" + output.toString + "]"
@@ -56,18 +56,18 @@ final case class TestCase(testname: Path, execs: Seq[Array[String]], testVectors
   val name: String = testname.toString
   val testPath = testname
 
-  def execsStr(prefix: String): String = {
+  def execsToString(prefix: String): String = {
     execs.zipWithIndex
       .map({ case (args, idx) =>
         prefix + " %d:".format(idx) + " [" + args.mkString("", ",", "") + "]"
       }).mkString("\n")
   }
 
-  def execFailMsg(prefix: String, idx: Int, realArgs: Array[String]) = {
+  def makeExecFailMsg(prefix: String, idx: Int, realArgs: Array[String]) = {
     prefix + "\n" +
       "   name: " + name + "]\n" +
       "   with execution sequence:\n" +
-      execsStr(" " * 6 + "exec") + "\n" +
+      execsToString(" " * 6 + "exec") + "\n" +
       "   actual failed execution is: \n" +
       realArgs.mkString(" " * 6 + "exec " + "%d:".format(idx) + " [", ",", "]") + "\n"
   }
@@ -85,19 +85,51 @@ object DirSuiteLike {
 trait DirSuiteLike extends FunSuiteLike {
 
 
-  protected def execParser(testname: Path): Seq[Array[String]] = {
+  protected def tokenizer(line: String): Array[String] = {
+    // TODO: Fix this silly error handling (we are behind scala-arm...)
+    if (line.isEmpty) {
+      // No args-case => ok
+      Array[String]()
+    } else {
+      val rawArgs = line.split(";", -1)
+
+      if (rawArgs.size < 2) {
+        // TODO: Exception, not nice
+        throw new DirSuiteException("Exec line is not terminated with ';': [" + line + "]")
+      } else {
+        val sgrAwar = rawArgs.reverse
+        val last = sgrAwar.head
+        if (last.nonEmpty) {
+          // there is trailing stuff after last ';',
+          // so it could be missed semi-colon
+          // TODO: Exception, not nice
+          throw new DirSuiteException("Exec line is not terminated with ';': [" + line + "]")
+        } else {
+          // drop "last", and return list in correct order
+          sgrAwar.drop(1).reverse
+        }
+      }
+    }
+  }
+
+  protected def parseExec(testname: Path): Seq[Array[String]] = {
+    val exexPrefix = "exec:"
     // Scala-ARM: managed close
     managed(io.Source.fromFile(testname.toString)).map(source => {
-      val execLines = source.getLines.map(str => str.trim).toList
-      val execs = execLines.map(cmd => cmd.split(";"))
-      execs
+      val execLines = source.getLines
+        .filter(!_.startsWith("#"))
+        .filter(_.startsWith(exexPrefix))
+        .map(_.stripPrefix(exexPrefix))
+        .map(str => str.trim)
+      val execs = execLines.map(tokenizer)
+      execs.toList
     }).opt match {
       case Some(execs) => execs
       case None => Seq[Array[String]]()
     }
   }
 
-  protected def argsMapping(testname: Path, args: Array[String]): Array[String] = {
+  protected def mapArgs(testname: Path, args: Array[String]): Array[String] = {
     args
   }
 
@@ -110,7 +142,7 @@ trait DirSuiteLike extends FunSuiteLike {
     fu.findFiles(testdir, Glob(basename + ".ref.*"))
   }
 
-  protected def getOutput(testdir: Path, testname: Path, reference: Path): Path = {
+  protected def mapOutput(testdir: Path, testname: Path, reference: Path): Path = {
     val fu = FileUtils(testdir.getFileSystem)
     val basename = fu.getBasename(testname) match {
       case (name, ext) => name
@@ -133,9 +165,13 @@ trait DirSuiteLike extends FunSuiteLike {
     }
   }
 
-  protected def registerDirSuiteTest(pattern: FindFilesPattern, tc: TestCase, testFun: (Array[String]) => Any) = {
+  protected def registerDirSuiteTest(
+    pattern: FindFilesPattern,
+    tc: TestCase,
+    testFuns: List[(Array[String]) => Any]) = {
+
     registerTest(pattern.toString + " => " + tc.name.toString) {
-      testExecutor(tc, testFun)
+      testExecutor(tc, testFuns)
     }
   }
 
@@ -149,15 +185,17 @@ trait DirSuiteLike extends FunSuiteLike {
 
     testnames.foreach(test => registerIgnoredDirSuiteTest(testPattern, test))
   }
+  def ignoreMultiTestDirSuite(basedir: Path, testPattern: FindFilesPattern)(
+    beginTestFun: (Array[String] => Any),
+    lastTestFun: (Array[String] => Any)) = {
 
-  /**
-   * This function should catch all exceptions which are potentially thrown by specimen
-   *
-   * @param basedir     name of dir which holds test dirs
-   * @param testPattern pattern of name of test names
-   * @param testFun    returns false if execution failed
-   */
-  def runDirSuite(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)) = {
+    val fu = FileUtils(basedir.getFileSystem)
+    val testnames = fu.findFiles(basedir, testPattern)
+
+    testnames.foreach(test => registerIgnoredDirSuiteTest(testPattern, test))
+  }
+
+  def getTestcases(basedir: Path, testPattern: FindFilesPattern): Seq[TestCase] = {
     val fu = FileUtils(basedir.getFileSystem)
 
     fu.ensurePath(basedir) match {
@@ -172,14 +210,30 @@ trait DirSuiteLike extends FunSuiteLike {
 
     val testnames = fu.findFiles(basedir, testPattern)
 
+    if (testnames.isEmpty) {
+      throw new DirSuiteException("=>\n" +
+        " " * 3 + "DirSuite is empty - there are no exec-files!\n" +
+        " " * 6 + "basedir: [" + basedir.toString + "]\n" +
+        " " * 6 + "pattern: " + testPattern.toString + "\n" +
+        " " * 3 + "if this is intentional, you could ignore it"
+        )
+    }
+
     val testCases = testnames.map(testname => {
       val testdir = testname.getParent
 
-      val execs = execParser(testname)
+      val execs = parseExec(testname)
+      if (execs.isEmpty) {
+        throw new DirSuiteException("=>\n" +
+          " " * 3 + "Exec for test is empty - there is nothing to run!\n" +
+          " " * 6 + "basedir: [" + basedir.toString + "]\n" +
+          " " * 6 + "testname: [" + testname.toString + "]\n"
+        )
+      }
 
       val testVectors = findReferences(testdir, testname)
         .map(reference => {
-          val output = getOutput(testdir, testname, reference)
+          val output = mapOutput(testdir, testname, reference)
           val comparator = selectValidator(testname, reference, output)
 
           TestVector(reference, output, comparator)
@@ -187,32 +241,74 @@ trait DirSuiteLike extends FunSuiteLike {
 
       TestCase(testname, execs, testVectors)
     })
-
-    for (tc <- testCases) {
-      registerDirSuiteTest(testPattern, tc, testFun)
-    }
+    testCases
   }
 
-  @SuppressWarnings(Array(
-    "org.wartremover.warts.Any"))
-  protected def testExecutor(tc: TestCase, testFun: (Array[String] => Any)) = {
+  def runDirSuite(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)) = {
 
-    tc.execs.zipWithIndex.foreach({
-      case (args, index) =>
-        val execArgs = argsMapping(tc.testname, args)
+    getTestcases(basedir, testPattern).foreach(tc => {
+      registerDirSuiteTest(testPattern, tc, List[(Array[String] => Any)](testFun))
+    })
+  }
+
+  def runMultiTestDirSuite(basedir: Path, testPattern: FindFilesPattern)(
+    beginTestFun: (Array[String] => Any),
+    lastTestFun: (Array[String] => Any)) = {
+
+    val testcases = getTestcases(basedir, testPattern)
+
+    testcases.foreach(tc => {
+      registerDirSuiteTest(testPattern, tc, List[(Array[String] => Any)](beginTestFun, lastTestFun))
+    })
+  }
+
+
+  @SuppressWarnings(Array(
+    "org.wartremover.warts.Any",
+    "org.wartremover.warts.TraversableOps"))
+  protected def testExecutor(tc: TestCase, testFuns: List[(Array[String] => Any)]) = {
+
+    if (tc.execs.length < testFuns.length) {
+      throw new DirSuiteException("=>\n" +
+        " " * 3 + "Exec line count is less than test function count. This is not supported!\n" +
+        " " * 6 + "testname: " + tc.testname + "\n"
+      )
+    }
+    /*
+      Bake execs with testfuns
+
+      val funs = List("a", "last")
+      val is = List(1, 2, 3, 4, 5)
+      is.reverse.zipAll(funs.reverse, 0, funs.head).reverse
+      res1: List[(Int, String)] = List((1,a), (2,a), (3,a), (4,a), (5,last))
+     */
+    val execsAndFunc: Seq[(Array[String], (Array[String]) => Any)] = tc.execs
+      .reverse
+      .zipAll(testFuns.reverse, Array[String](), testFuns.head)
+      .reverse
+
+    execsAndFunc.zipWithIndex.foreach({
+      case ((args, testFun), index) =>
+
+        val execArgs = mapArgs(tc.testname, args)
         try {
 
           /* this is real-deal for test run */
-          val v = testFun(execArgs)
+          testFun(execArgs)
 
         } catch {
           case tfe: TestFailedException =>
             throw tfe.modifyMessage(origMsg => {
               Option("" +
-                tc.execFailMsg(DirSuiteLike.executionFailureMsgPrefix, index, execArgs) +
+                tc.makeExecFailMsg(DirSuiteLike.executionFailureMsgPrefix, index, execArgs) +
                 " " * 3 + "Failed result: \n" +
                 " " * 6 + origMsg.getOrElse("") + "\n")
             })
+          case ex: Exception =>
+            throw new DirSuiteException("" +
+              tc.makeExecFailMsg(DirSuiteLike.executionFailureMsgPrefix, index, execArgs) +
+              " " * 3 + "Failed result: \n" +
+              " " * 6 + ex.getMessage + "\n", ex)
         }
     })
 
@@ -225,21 +321,17 @@ trait DirSuiteLike extends FunSuiteLike {
         /* this is real deal for test result validation */
         val compResult = testVector.validator(tc.testname, testVector.reference, testVector.output)
 
-        compResult match {
-          case None =>
-            None
-          case Some(cmpMsg) => Some(
-            testVector.makeComparatorErrMsg(DirSuiteLike.testVectorFailureMsgPrefix, tc) + "\n" +
-              "Comparator: \n" +
-              "   msg: " + cmpMsg + "\n"
-          )
-        }
+        compResult.map(msg =>
+          testVector.makeComparatorErrMsg(DirSuiteLike.testVectorFailureMsgPrefix, tc) + "\n" +
+            " " * 3 + "Comparator: \n" +
+            " " * 6 + "msg: " + msg + "\n"
+        )
       } catch {
         case ex: Exception => Some(
           testVector.makeComparatorErrMsg(DirSuiteLike.testVectorExceptionMsgPrefix, tc) + "\n" +
-            "Exception: \n" +
-            "   cause: " + ex.getClass.getCanonicalName + "\n" +
-            "   msg: " + ex.getMessage + "\n"
+            " " * 3 + "Exception: \n" +
+            " " * 6 + "cause: " + ex.getClass.getCanonicalName + "\n" +
+            " " * 6 + "msg: " + ex.getMessage + "\n"
         )
       }
       // NOTE: Collect all comp results, and report all end results together (Cats ...)?

@@ -1,3 +1,4 @@
 # format: exec
 exec:
+# comment; foo; bar;
 exec:

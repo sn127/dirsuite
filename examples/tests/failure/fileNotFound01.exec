@@ -1,0 +1,2 @@
+# format: exec
+exec:failure/out.fileNotFound.this-is-wrong-name.txt;1;

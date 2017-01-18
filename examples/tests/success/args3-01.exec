@@ -1,0 +1,5 @@
+# format: exec
+exec:1;2;3;
+# 3x empty args
+exec:;;;
+exec:7;;9;
