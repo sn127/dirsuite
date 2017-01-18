@@ -44,7 +44,7 @@ lazy val testing = (project in file("testing")).
   settings(commonSettings: _*).
   settings(
     name := "utils-testing",
-    version := "0.5.1-dev",
+    version := "0.6.0-pre",
     isSnapshot := true,
     fork in run := true,
     libraryDependencies += scalaArm,

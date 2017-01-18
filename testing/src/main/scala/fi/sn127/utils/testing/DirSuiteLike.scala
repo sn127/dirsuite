@@ -86,24 +86,29 @@ trait DirSuiteLike extends FunSuiteLike {
 
 
   protected def tokenizer(line: String): Array[String] = {
+    // TODO: Fix this silly error handling (we are behind scala-arm...)
     if (line.isEmpty) {
       // No args-case => ok
       Array[String]()
     } else {
       val rawArgs = line.split(";", -1)
-      if (rawArgs.size < 2){
-        // it was string without any ';'
-        // TODO ERROR
+
+      if (rawArgs.size < 2) {
+        // TODO: Exception, not nice
+        throw new DirSuiteException("Exec line is not terminated with ';': [" + line + "]")
+      } else {
+        val sgrAwar = rawArgs.reverse
+        val last = sgrAwar.head
+        if (last.nonEmpty) {
+          // there is trailing stuff after last ';',
+          // so it could be missed semi-colon
+          // TODO: Exception, not nice
+          throw new DirSuiteException("Exec line is not terminated with ';': [" + line + "]")
+        } else {
+          // drop "last", and return list in correct order
+          sgrAwar.drop(1).reverse
+        }
       }
-      val sgrAwar = rawArgs.reverse
-      val last = sgrAwar.head
-      if (last.nonEmpty) {
-        // there is trailing stuff after last ';',
-        // so it could be missed semi-colon
-        // TODO ERROR
-      }
-      // drop "last", and return list in correct order
-      sgrAwar.drop(1).reverse
     }
   }
 
@@ -277,7 +282,6 @@ trait DirSuiteLike extends FunSuiteLike {
       is.reverse.zipAll(funs.reverse, 0, funs.head).reverse
       res1: List[(Int, String)] = List((1,a), (2,a), (3,a), (4,a), (5,last))
      */
-    // TODO lengths
     val execsAndFunc: Seq[(Array[String], (Array[String]) => Any)] = tc.execs
       .reverse
       .zipAll(testFuns.reverse, Array[String](), testFuns.head)
@@ -317,15 +321,11 @@ trait DirSuiteLike extends FunSuiteLike {
         /* this is real deal for test result validation */
         val compResult = testVector.validator(tc.testname, testVector.reference, testVector.output)
 
-        compResult match {
-          case None =>
-            None
-          case Some(cmpMsg) => Some(
-            testVector.makeComparatorErrMsg(DirSuiteLike.testVectorFailureMsgPrefix, tc) + "\n" +
-              " " * 3 + "Comparator: \n" +
-              " " * 6 + "msg: " + cmpMsg + "\n"
-          )
-        }
+        compResult.map(msg =>
+          testVector.makeComparatorErrMsg(DirSuiteLike.testVectorFailureMsgPrefix, tc) + "\n" +
+            " " * 3 + "Comparator: \n" +
+            " " * 6 + "msg: " + msg + "\n"
+        )
       } catch {
         case ex: Exception => Some(
           testVector.makeComparatorErrMsg(DirSuiteLike.testVectorExceptionMsgPrefix, tc) + "\n" +

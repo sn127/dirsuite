@@ -10,14 +10,6 @@ Latest releases (for scala 2.12) are:
  * utils-fs: 0.8.0
  * utils-testing: 0.5.1
 
-Release artifacts are published on the maven Central Repository.
-
-Library configuration for sbt:
-
-    libraryDependencies += "fi.sn127" %% "utils-fs" % "0.8.0"
-    libraryDependencies += "fi.sn127" %% "utils-testing" % "0.5.1"
-
-
 #### fs:0.8.0, testing:0.5.1
 
  - fs:

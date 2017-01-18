@@ -2,20 +2,41 @@
 [![Build Status](https://travis-ci.org/sn127/utils.svg?branch=master)](https://travis-ci.org/sn127/utils)
 [![Coverage Status](https://coveralls.io/repos/github/sn127/utils/badge.svg?branch=master)](https://coveralls.io/github/sn127/utils?branch=master)
 
-# Utils
+ * utils-fs: [![Maven Central](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-fs_2.12/badge.svg?style=plastic)](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-fs_2.12)
+ * utils-testing: [![Maven Central](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-testing_2.12/badge.svg?style=plastic)](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-testing_2.12)
+
+# Utils (DirSuite add-on to ScalaTest)
 
  * utils-fs
    - java.nio.{Files,Paths} path manipulating utilities
-   - Recursive findFiles with glob and regex pattern
+   - Recursive findFiles with glob and regex pattern matching
  * utils-testing
-   - Scalatest-like `DirSuite` to run collection of tests with
-     predefined input and output references on filesystem.
+   - DirSuite add-on to ScalaTest. DirSuite can run (huge) collection of tests
+     which are defined on filesystem. Arguments, inputs and expected reference output
+     files are defined by test directory.
 
 
 ## Documentation
 
  * [docs/dirsuite.md](./docs/dirsuite.md) has some general information about dirsuite
  * [docs/howto.md](./docs/howto.md) has examples against dirsuite's own tests
+ * Example test setup with DirSuite:
+   * [example-tests](./examples/tests/)
+   * [example-DirSuite](./examples/src/test/scala/DirSuiteDemo.scala)
+
+
+## Releases
+
+Release artifacts are published on the maven 
+[Central Repository](http://search.maven.org/#search%7Cga%7C1%7Cg%3A%22fi.sn127%22).
+
+Library configuration for sbt:
+
+    libraryDependencies += "fi.sn127" %% "utils-fs" % "0.8.0"
+    libraryDependencies += "fi.sn127" %% "utils-testing" % "0.5.1"
+
+For release information and version history details, see [CHANGELOG](./CHANGELOG.md).
+
 
 ## Contributing to Utils
 
@@ -38,7 +59,7 @@ so they don't have be global settings in your system.
 Please make sure that you sign-off all your PR's commits. 
 
 
-## Thanks
+## Credits
 
 See [THANKS](./THANKS.md) for full list of credits. Most notably 
 this started as a test tool for [Abandon](https://github.com/hrj/abandon) 
