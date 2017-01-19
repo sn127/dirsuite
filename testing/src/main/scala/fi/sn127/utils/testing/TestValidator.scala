@@ -21,9 +21,30 @@ import java.nio.file.Path
 import org.scalactic.TripleEquals._
 import org.scalatest.StreamlinedXmlEquality._
 
+/**
+ * Default validators for test cases. Validator is selected
+ * by [[DirSuite.selectValidator]]-method, which can be overloaded
+ * test-by-test class basis.
+ *
+ * Validator interface is:
+ *
+ * (testname: Path, reference: Path, output:Path) => Option[String]
+ *
+ * When None is successfull validation, and Some(ErrMsg)
+ * is validation error.
+ */
 @SuppressWarnings(Array("org.wartremover.warts.ToString"))
 object TestValidator {
 
+  /**
+   * Validate text based output against reference.
+   * This validation doesn't check eol-changes.
+   *
+   * @param testname full path to test's exec-file
+   * @param reference full path to reference file
+   * @param output full path to output file
+   * @return Either None or Some(Validation error message)
+   */
   def txtValidator(testname: Path, reference: Path, output: Path): Option[String] = {
     // TODO: Scala-ARM, and io.File?
     val srcFirst = scala.io.Source.fromFile(output.toString)
@@ -39,6 +60,20 @@ object TestValidator {
     }
   }
 
+  /**
+   * Validate XML-based output against reference.
+   * This validation doesn't check exact match of
+   * XML, but compares DOMs. For example, pretty-printed
+   * and non-pretty printed validates same.
+   *
+   * Also, if one file is missing xml-declaration,
+   * they still validates same!
+   *
+   * @param testname full path to test's exec-file
+   * @param reference full path to reference file
+   * @param output full path to output file
+   * @return Either None or Some(Validation error message)
+   */
   def xmlValidator(testname: Path, reference: Path, output: Path): Option[String] = {
     val xmlReference = scala.xml.XML.loadFile(reference.toString)
     val xmlOutput = scala.xml.XML.loadFile(output.toString)

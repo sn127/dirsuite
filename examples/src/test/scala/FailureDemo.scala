@@ -19,7 +19,7 @@ class FailureDemo extends DirSuite {
   /**
    * Exec failure: Normal assertion error
    */
-  ignoreDirSuite(testdir, Glob("success/args3-[0-9]*.exec")) { args: Array[String] =>
+  ignoreDirSuiteTestCases(testdir, Glob("success/args3-[0-9]*.exec")) { args: Array[String] =>
     assertResult(2) {
       app.doArgsCount(args)
     }
@@ -29,7 +29,7 @@ class FailureDemo extends DirSuite {
    * Exec failure: Exception
    * TODO: testing, this needs better error message
    */
-  ignoreDirSuite(testdir, Glob("success/singleStepEx[0-9]*.exec")) { args: Array[String] =>
+  ignoreDirSuiteTestCases(testdir, Glob("success/singleStepEx[0-9]*.exec")) { args: Array[String] =>
     assertResult(DemoApp.SUCCESS) {
       app.doFlaky(args)
     }
@@ -38,7 +38,7 @@ class FailureDemo extends DirSuite {
   /**
    * Test Vector failure: missing output
    */
-  ignoreDirSuite(testdir, Glob("failure/fileNotFound[0-9]*.exec")) { args: Array[String] =>
+  ignoreDirSuiteTestCases(testdir, Glob("failure/fileNotFound[0-9]*.exec")) { args: Array[String] =>
     assertResult(DemoApp.SUCCESS) {
       app.doTxt(args)
     }
@@ -47,7 +47,7 @@ class FailureDemo extends DirSuite {
   /**
    * Test Vector failure: Data differs (reference != output)
    */
-  ignoreDirSuite(testdir, Glob("failure/content[0-9]*.exec")) { args: Array[String] =>
+  ignoreDirSuiteTestCases(testdir, Glob("failure/content[0-9]*.exec")) { args: Array[String] =>
     assertResult(DemoApp.SUCCESS) {
       app.doTxt(args)
     }
@@ -56,7 +56,7 @@ class FailureDemo extends DirSuite {
   /**
    * Test Vector failure: Exception while validating vector
    */
-  ignoreDirSuite(testdir, Glob("failure/xmlEx[0-9]*.exec")) { args: Array[String] =>
+  ignoreDirSuiteTestCases(testdir, Glob("failure/xmlEx[0-9]*.exec")) { args: Array[String] =>
     assertResult(DemoApp.SUCCESS) {
       app.doTxt(args)
     }

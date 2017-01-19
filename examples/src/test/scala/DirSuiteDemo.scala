@@ -17,7 +17,7 @@ class DirSuiteDemo extends DirSuite {
    * Search method: Glob
    * https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
    */
-  runDirSuite(testdir, Glob("success/noargs[0-9]*.exec")) { args: Array[String] =>
+  runDirSuiteTestCases(testdir, Glob("success/noargs[0-9]*.exec")) { args: Array[String] =>
     assertResult(0) {
       app.doArgsCount(args)
     }
@@ -31,7 +31,7 @@ class DirSuiteDemo extends DirSuite {
    * Search method: Glob
    * https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
    */
-  runDirSuite(testdir, Glob("success/args3-[0-9]*.exec")) { args: Array[String] =>
+  runDirSuiteTestCases(testdir, Glob("success/args3-[0-9]*.exec")) { args: Array[String] =>
     assertResult(3) {
       app.doArgsCount(args)
     }
@@ -46,7 +46,7 @@ class DirSuiteDemo extends DirSuite {
    * Search method: Regex
    * https://docs.oracle.com/javase/tutorial/essential/regex/index.html
    */
-  runDirSuite(testdir, Regex("success/txt[0-9]+\\.exec")) { args: Array[String] =>
+  runDirSuiteTestCases(testdir, Regex("success/txt[0-9]+\\.exec")) { args: Array[String] =>
     assertResult(DemoApp.SUCCESS) {
       app.doTxt(args)
     }
@@ -61,7 +61,7 @@ class DirSuiteDemo extends DirSuite {
    * Search method: Regex
    * https://docs.oracle.com/javase/tutorial/essential/regex/index.html
    */
-  runDirSuite(testdir, Regex("success/xml[0-9]+\\.exec")) { args: Array[String] =>
+  runDirSuiteTestCases(testdir, Regex("success/xml[0-9]+\\.exec")) { args: Array[String] =>
     assertResult(DemoApp.SUCCESS) {
       app.doXml(args)
     }
@@ -80,7 +80,7 @@ class DirSuiteDemo extends DirSuite {
    * Search method: Glob
    * https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
    */
-  runDirSuite(testdir, Glob("success/mixed[0-9]*.exec")) { args: Array[String] =>
+  runDirSuiteTestCases(testdir, Glob("success/mixed[0-9]*.exec")) { args: Array[String] =>
     assertResult(DemoApp.SUCCESS) {
       app.doTxtXml(args)
     }
@@ -92,7 +92,7 @@ class DirSuiteDemo extends DirSuite {
    * This is internal assertThrows/intercept, so every execution step
    * must throw an exception if multiple steps are run.
    */
-  runDirSuite(testdir, Glob("success/singleStepEx[0-9]*.exec")) { args: Array[String] =>
+  runDirSuiteTestCases(testdir, Glob("success/singleStepEx[0-9]*.exec")) { args: Array[String] =>
     assertThrows[RuntimeException]{
       app.doFlaky(args)
     }
@@ -108,24 +108,18 @@ class DirSuiteDemo extends DirSuite {
    *  exec 1 => assertResult(SUCCESS)
    *  exec 2 => assertThrows[RuntimeException]
    */
-  runMultiTestDirSuite(testdir, Glob("success/multiStepEx[0-9]*.exec"))(
-    { args: Array[String] =>
-      /*
-       * All steps at the begin must succeed
-       */
-      assertResult(DemoApp.SUCCESS) {
-        app.doFlaky(args)
-      }
-    },
-    { args: Array[String] =>
-      /*
-       * Last step must fail with exception
-       */
-      assertThrows[RuntimeException] {
-        app.doFlaky(args)
-      }
+  runDualAssertionDirSuiteTestCases(testdir, Glob("success/multiStepEx[0-9]*.exec")) { args: Array[String] =>
+    // All steps at the begin must succeed
+    assertResult(DemoApp.SUCCESS) {
+      app.doFlaky(args)
     }
-  )
+  } { args: Array[String] =>
+     // Last step must fail with exception
+    assertThrows[RuntimeException] {
+      app.doFlaky(args)
+    }
+  }
+
   /**
    * First execution steps must succeed, and then
    * Last execution step  must fail
@@ -135,22 +129,15 @@ class DirSuiteDemo extends DirSuite {
    *  exec 1 => assertResult(SUCCESS)
    *  exec 2 => assertResult(FAILURE)
    */
-  runMultiTestDirSuite(testdir, Glob("success/multiStepFail[0-9]*.exec"))(
-    { args: Array[String] =>
-      /*
-       * All steps at the begin must succeed
-       */
-      assertResult(DemoApp.SUCCESS) {
-        app.doFlaky(args)
-      }
-    },
-    { args: Array[String] =>
-      /*
-       * Last step must fail
-       */
-      assertResult(DemoApp.FAILURE) {
-        app.doFlaky(args)
-      }
+  runDualAssertionDirSuiteTestCases(testdir, Glob("success/multiStepFail[0-9]*.exec")) { args: Array[String] =>
+    // Fist steps must succeed
+    assertResult(DemoApp.SUCCESS) {
+      app.doFlaky(args)
     }
-  )
+  } { args: Array[String] =>
+    // last step must fail
+    assertResult(DemoApp.FAILURE) {
+      app.doFlaky(args)
+    }
+  }
 }
