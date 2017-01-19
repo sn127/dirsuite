@@ -2,8 +2,8 @@
 [![Build Status](https://travis-ci.org/sn127/utils.svg?branch=master)](https://travis-ci.org/sn127/utils)
 [![Coverage Status](https://coveralls.io/repos/github/sn127/utils/badge.svg?branch=master)](https://coveralls.io/github/sn127/utils?branch=master)
 
- * utils-fs: [![Maven Central](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-fs_2.12/badge.svg?style=plastic)](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-fs_2.12)
- * utils-testing: [![Maven Central](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-testing_2.12/badge.svg?style=plastic)](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-testing_2.12)
+ * utils-fs: [![Maven Central](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-fs_2.12/badge.svg?style=plastic)](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-fs_2.12)[![Javadocs](http://javadoc.io/badge/fi.sn127/utils-fs_2.12.svg?color=blue)](http://javadoc.io/doc/fi.sn127/utils-fs_2.12)
+ * utils-testing: [![Maven Central](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-testing_2.12/badge.svg?style=plastic)](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-testing_2.12)[![Javadocs](http://javadoc.io/badge/fi.sn127/utils-testing_2.12.svg?color=blue)](http://javadoc.io/doc/fi.sn127/utils-testing_2.12)
 
 # Utils (DirSuite add-on to ScalaTest)
 

@@ -26,17 +26,39 @@ import scala.util.{Failure, Success}
 
 import fi.sn127.utils.fs.{FileUtils, FindFilesPattern, Glob}
 
+/**
+ * Generic exception class for DirSuite.
+ * @param msg message
+ * @param cause if there was underlaying exception
+ */
 @SuppressWarnings(Array(
 "org.wartremover.warts.Null",
 "org.wartremover.warts.DefaultArguments"))
 class DirSuiteException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause) {}
 
+/**
+ * Exception class for testvector validation errors. Validator is NOT supposed
+ * throw this, but to use Option[String] to report test vector failures.
+ *
+ * Typically this is thrown in case that output files is not found, or there was
+ * a format bases exception (output is not syntactically correct, e.g. JSON/XML SAX errors).
+ *
+ * @param msg message
+ * @param cause if there was underlaying exception
+ */
 @SuppressWarnings(Array(
   "org.wartremover.warts.Null",
   "org.wartremover.warts.DefaultArguments"))
 class TestVectorException(msg: String, cause: Throwable = null) extends DirSuiteException(msg, cause)
 
-
+/**
+ * Eech test vector contains one input/output pair and validator-method to validate
+ * this testvector.  One testcase con contain zero or many testvectors.
+ *
+ * @param reference expected output
+ * @param output actual output
+ * @param validator for this testvector
+ */
 final case class TestVector(reference: Path, output: Path, validator: (Path, Path, Path) => Option[String]) {
 
   @SuppressWarnings(Array("org.wartremover.warts.ToString"))
@@ -51,11 +73,23 @@ final case class TestVector(reference: Path, output: Path, validator: (Path, Pat
   }
 }
 
+/**
+ * This holds all information about one test case
+ *
+ * @param testname full path of test's exec-file.
+ * @param execs sequence of steps which will be executed when this test case is run.
+ * @param testVectors test vectors. These are checked after all steps are executed.
+ */
 @SuppressWarnings(Array("org.wartremover.warts.ToString"))
 final case class TestCase(testname: Path, execs: Seq[Array[String]], testVectors: Seq[TestVector]){
   val name: String = testname.toString
   val testPath = testname
 
+  /**
+   * Reporting: execs to pretty string
+   * @param prefix for each exec line
+   * @return execs as pretty string
+   */
   def execsToString(prefix: String): String = {
     execs.zipWithIndex
       .map({ case (args, idx) =>
@@ -63,6 +97,13 @@ final case class TestCase(testname: Path, execs: Seq[Array[String]], testVectors
       }).mkString("\n")
   }
 
+  /**
+   * Reporting: Failure message in case execution of one step failed
+   * @param prefix for whole error message
+   * @param idx  index of which step failed
+   * @param realArgs actual arguments which were used to execute failing step ([[DirSuite.mapArgs]])
+   * @return error message as pretty string
+   */
   def makeExecFailMsg(prefix: String, idx: Int, realArgs: Array[String]) = {
     prefix + "\n" +
       "   name: " + name + "]\n" +
@@ -79,23 +120,52 @@ object DirSuiteLike {
   val testVectorExceptionMsgPrefix = "TEST FAILED WITH EXCEPTION WHILE COMPARING TEST VECTORS!"
 }
 
+/**
+ * DirSuiteLike trait for DirSuite.
+ * At the moment this is actual implementation.
+ */
 @SuppressWarnings(Array(
   "org.wartremover.warts.ToString",
   "org.wartremover.warts.NonUnitStatements"))
 trait DirSuiteLike extends FunSuiteLike {
 
+  /**
+   * Get separator for exec line splitting.
+   *
+   * This separator is used to split one exec line to actual arguments.
+   * Overload this if default ";" is not good for you.
+   *
+   * @return exec line separator
+   */
+  protected def getExecArgumentSeparator: String = ";"
 
-  protected def tokenizer(line: String): Array[String] = {
+  /**
+   * Tokenizer for exec-line.
+   *
+   * If default separator for arguments is not good for you,
+   * then overload [[getExecArgumentSeparator]].
+   *
+   * If you have to use some other format for exec lines (e.g.) JSON,
+   * then overload this function. If one raw: exec line is:
+   *
+   * exec := "exec:" TEXT
+   *
+   * then this function will be fed with TEXT.
+   *
+   * @param execLine one exec line which to split, with "exec:" prefix stripped away.
+   * @return execline as  args vector
+   */
+  protected def tokenizer(execLine: String): Array[String] = {
     // TODO: Fix this silly error handling (we are behind scala-arm...)
-    if (line.isEmpty) {
+    if (execLine.isEmpty) {
       // No args-case => ok
       Array[String]()
     } else {
-      val rawArgs = line.split(";", -1)
+      val rawArgs = execLine.split(getExecArgumentSeparator, -1)
 
       if (rawArgs.size < 2) {
         // TODO: Exception, not nice
-        throw new DirSuiteException("Exec line is not terminated with ';': [" + line + "]")
+        throw new DirSuiteException("Exec line is not terminated with ';': [" + execLine + "]")
       } else {
         val sgrAwar = rawArgs.reverse
         val last = sgrAwar.head
@@ -103,7 +173,7 @@ trait DirSuiteLike extends FunSuiteLike {
           // there is trailing stuff after last ';',
           // so it could be missed semi-colon
           // TODO: Exception, not nice
-          throw new DirSuiteException("Exec line is not terminated with ';': [" + line + "]")
+          throw new DirSuiteException("Exec line is not terminated with ';': [" + execLine + "]")
         } else {
           // drop "last", and return list in correct order
           sgrAwar.drop(1).reverse
@@ -112,6 +182,17 @@ trait DirSuiteLike extends FunSuiteLike {
     }
   }
 
+  /**
+   * Parse one exec file.
+   *
+   * If you have to change exec file format, look for
+   * [[tokenizer]] to parse each exec line and
+   * [[getExecArgumentSeparator]] to change
+   * exec's arguments separator.
+   *
+   * @param testname full path of testcase
+   * @return exec steps and arguments for each step
+   */
   protected def parseExec(testname: Path): Seq[Array[String]] = {
     val exexPrefix = "exec:"
     // Scala-ARM: managed close
@@ -129,10 +210,39 @@ trait DirSuiteLike extends FunSuiteLike {
     }
   }
 
+  /**
+   * Map arguments before test execution.
+   * If you have to provide e.g. some default argument for each test case,
+   * then overload this function, and change arguments as needed.
+   * (Add, remove, or transform args).
+   *
+   * @param testname full path of testcase
+   * @param args original arguments
+   * @return args after transformation
+   */
   protected def mapArgs(testname: Path, args: Array[String]): Array[String] = {
     args
   }
 
+  /**
+   * Find references for testcase.
+   *
+   * Default logic to find references is following:
+   *
+   * use basename of testcase, e.g. filename of testcase without last extension,
+   * and append ".ref.*" glob to that basename. Then search under same directory,
+   * where testcase is located.
+   *
+   * For example:
+   *
+   *    /path/to/dirsuite/testcase/test01.exec
+   *
+   *    findFiles("/path/to/dirsuite/testcase", Glob("test01.ref.*"))
+   *
+   * @param testdir
+   * @param testname
+   * @return
+   */
   protected def findReferences(testdir: Path, testname: Path): Seq[Path] = {
     val fu = FileUtils(testdir.getFileSystem)
     val basename = fu.getBasename(testname) match {
@@ -142,6 +252,25 @@ trait DirSuiteLike extends FunSuiteLike {
     fu.findFiles(testdir, Glob(basename + ".ref.*"))
   }
 
+  /**
+   * Map output filenames based on reference paths.
+   *
+   * use basename of testcase, e.g. filename of testcase without last extension,
+   * and prefix "out.*" to that basename. Then append reference's filename suffix
+   * to that name. Reference file suffix is stripped (basename + ".ref.").
+   *
+   * For example:
+   *
+   *    /path/to/dirsuite/testcase/test01.exec
+   *    /path/to/dirsuite/testcase/test01.ref.output-name.txt
+   *
+   *    output : out.test01.output-name.txt
+   *
+   * @param testdir directory of this test case
+   * @param testname full path to test case
+   * @param reference full path to reference file
+   * @return full path to mapped output file path
+   */
   protected def mapOutput(testdir: Path, testname: Path, reference: Path): Path = {
     val fu = FileUtils(testdir.getFileSystem)
     val basename = fu.getBasename(testname) match {
@@ -152,6 +281,18 @@ trait DirSuiteLike extends FunSuiteLike {
     fu.getPath(testdir.toString, output)
   }
 
+  /**
+   * Select validator for this (one) test vector.
+   *
+   * Default logic is that [[TestValidator.txtValidator]] is used
+   * for "*.txt" files, and [[TestValidator.xmlValidator]] is used for
+   * "*.xml" files.
+   *
+   * @param testname full path of this test case
+   * @param reference full path of reference file
+   * @param output full path of output file
+   * @return Validator for this test vector
+   */
   protected def selectValidator(testname: Path, reference: Path, output: Path): ((Path, Path, Path) => Option[String]) = {
     val fu = FileUtils(testname.getFileSystem)
 
@@ -165,37 +306,88 @@ trait DirSuiteLike extends FunSuiteLike {
     }
   }
 
-  protected def registerDirSuiteTest(
+  /**
+   * Register dirsuite
+   *
+   * If you don't like see each test case to be printed on test output,
+   * you could override this function and just call [[testCaseExecutor]] here.
+   *
+   * @param pattern which was used to find current test case
+   * @param tc test case, see [[TestVector]] for available information
+   * @param testFuns test functions which are run with this test case
+   */
+  protected def registerDirSuiteTestCase(
     pattern: FindFilesPattern,
     tc: TestCase,
     testFuns: List[(Array[String]) => Any]) = {
 
     registerTest(pattern.toString + " => " + tc.name.toString) {
-      testExecutor(tc, testFuns)
+      testCaseExecutor(tc, testFuns)
     }
   }
 
-  protected def registerIgnoredDirSuiteTest(pattern: FindFilesPattern, testname: Path) = {
+  /**
+   * Register ignored test case.
+   *
+   * If you don't like see ignored test case to be printed on test output,
+   * you can overload this function and just don't do anything.
+   * Or even better, overload [[ignoreDirSuiteTestCases]] and register whole dirSuite once,
+   * so you still get information that there are ignored tests.
+   *
+   * @param pattern which was used to find current test case
+   * @param testname full path to test case
+   */
+  protected def registerIgnoredDirSuiteTestCase(pattern: FindFilesPattern, testname: Path) = {
     registerIgnoredTest(pattern.toString + " => " + testname.toString) {}
   }
 
-  def ignoreDirSuite(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)) = {
+  /**
+   * Ignore these dirSuite tests.
+   *
+   * Overload this if youd don't like to see all testcases which are ignored.
+   * You could here just cal [[registerIgnoredTest]] and register e.g. pattern.
+   *
+   * @param basedir of test cases
+   * @param testPattern pattern to find test cases
+   * @param testFun test function to run with test cases
+   */
+  def ignoreDirSuiteTestCases(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)) = {
     val fu = FileUtils(basedir.getFileSystem)
     val testnames = fu.findFiles(basedir, testPattern)
 
-    testnames.foreach(test => registerIgnoredDirSuiteTest(testPattern, test))
+    testnames.foreach(test => registerIgnoredDirSuiteTestCase(testPattern, test))
   }
-  def ignoreMultiTestDirSuite(basedir: Path, testPattern: FindFilesPattern)(
+
+  /**
+   * Ignore these dirSuite tests.
+   *
+   * Overload this if youd don't like to see all testcases which are ignored.
+   * You could here just cal [[registerIgnoredTest]] and register e.g. pattern.
+   *
+   * @param basedir of test cases
+   * @param testPattern pattern to find test cases
+   * @param beginTestFun test function which is used 1 .. N-1 test steps
+   * @param lastTestFun test function which is used for the last test step
+   */
+  def ignoreDualAssertionDirSuiteTestCases(basedir: Path, testPattern: FindFilesPattern)(
     beginTestFun: (Array[String] => Any),
     lastTestFun: (Array[String] => Any)) = {
 
     val fu = FileUtils(basedir.getFileSystem)
     val testnames = fu.findFiles(basedir, testPattern)
 
-    testnames.foreach(test => registerIgnoredDirSuiteTest(testPattern, test))
+    testnames.foreach(test => registerIgnoredDirSuiteTestCase(testPattern, test))
   }
 
-  def getTestcases(basedir: Path, testPattern: FindFilesPattern): Seq[TestCase] = {
+  /**
+   * Find test cases under basedir, by using test pattern
+   * to match test cases.
+   *
+   * @param basedir of test directory
+   * @param testPattern pattern to find test cases
+   * @return found test cases
+   */
+  protected def getDirSuiteTestCases(basedir: Path, testPattern: FindFilesPattern): Seq[TestCase] = {
     val fu = FileUtils(basedir.getFileSystem)
 
     fu.ensurePath(basedir) match {
@@ -244,29 +436,87 @@ trait DirSuiteLike extends FunSuiteLike {
     testCases
   }
 
-  def runDirSuite(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)) = {
+  /**
+   * Find and Run test cases based on basedir and testPattern.
+   *
+   * In addition of normal parameter, there is actual test method as parameter.
+   * This test method will be executed for each exec line, with arguments wich
+   * are defined by that exec-line.
+   *
+   * For more complete examples, see:
+   * [[https://github.com/sn127/utils/blob/master/docs/howto.md]]
+   *
+   * Below is listed typical test case:
+   * {{{
+   *   runDirSuiteTestCases(testdir, Glob("success/basic[0-9]*.exec")) { args: Array[String] =>
+   *     assertResult(DemoApp.SUCCESS) {
+   *       app.doTxt(args)
+   *     }
+   *   }
+   * }}}
+   *
+   * @param basedir of test case directory
+   * @param testPattern pattern of test cases
+   * @param testFun test function which is used to test each test case
+   */
+  def runDirSuiteTestCases(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)) = {
 
-    getTestcases(basedir, testPattern).foreach(tc => {
-      registerDirSuiteTest(testPattern, tc, List[(Array[String] => Any)](testFun))
+    getDirSuiteTestCases(basedir, testPattern).foreach(tc => {
+      registerDirSuiteTestCase(testPattern, tc, List[(Array[String] => Any)](testFun))
     })
   }
 
-  def runMultiTestDirSuite(basedir: Path, testPattern: FindFilesPattern)(
-    beginTestFun: (Array[String] => Any),
-    lastTestFun: (Array[String] => Any)) = {
+  /**
+   * Run (and find) dual assertion test cases.
+   * These are typically test cases where first steps
+   * are supposed to behave one way (succeeds),
+   * and then the last step is supposed to behave differently (fails).
+   *
+   * This is useful for example testing a case when
+   * triggering of error you must first run multiple successful steps.
+   *
+   * {{{
+   *   runDualAssertionDirSuiteTestCases(testdir, Glob("success/multiStepFail[0-9]*.exec"))
+   *     { args: Array[String] =>
+   *       // All steps at first must succeed
+   *       assertResult(DemoApp.SUCCESS) {
+   *         app.doFlaky(args)
+   *       }
+   *     } { args: Array[String] =>
+   *         // Then the last step must fail
+   *         assertThrows[RuntimeException] {
+   *           app.doFlaky(args)
+   *       }
+   *     }
+   * }}}
+   *
+   * @param basedir of test case directory
+   * @param testPattern Glob or Regex pattern of test cases
+   * @param firstTestFun test function for first execution steps
+   * @param lastTestFun  test function for last execution step
+   */
+  def runDualAssertionDirSuiteTestCases(basedir: Path, testPattern: FindFilesPattern)
+    (firstTestFun: (Array[String] => Any))
+    (lastTestFun: (Array[String] => Any)): Unit = {
 
-    val testcases = getTestcases(basedir, testPattern)
+    val testcases = getDirSuiteTestCases(basedir, testPattern)
 
     testcases.foreach(tc => {
-      registerDirSuiteTest(testPattern, tc, List[(Array[String] => Any)](beginTestFun, lastTestFun))
+      registerDirSuiteTestCase(testPattern, tc, List[(Array[String] => Any)](firstTestFun, lastTestFun))
     })
   }
 
 
+  /**
+   * Execute one test case.
+   *
+   * @param tc test case to be executed
+   * @param testFuns test functions to be used for testing
+   */
   @SuppressWarnings(Array(
     "org.wartremover.warts.Any",
     "org.wartremover.warts.TraversableOps"))
-  protected def testExecutor(tc: TestCase, testFuns: List[(Array[String] => Any)]) = {
+  protected def testCaseExecutor(tc: TestCase, testFuns: List[(Array[String] => Any)]) = {
 
     if (tc.execs.length < testFuns.length) {
       throw new DirSuiteException("=>\n" +

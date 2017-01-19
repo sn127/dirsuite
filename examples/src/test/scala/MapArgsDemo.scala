@@ -32,7 +32,7 @@ class MapArgsDemo extends DirSuite {
   /**
    * Run all tests with our own version of args
    */
-  runDirSuite(testdir, Glob("args/txt[0-9]*.exec")) { args: Array[String] =>
+  runDirSuiteTestCases(testdir, Glob("args/txt[0-9]*.exec")) { args: Array[String] =>
     assertResult(DemoApp.SUCCESS) {
       app.doTxt(args)
     }
