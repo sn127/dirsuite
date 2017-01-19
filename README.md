@@ -33,7 +33,7 @@ Release artifacts are published on the maven
 Library configuration for sbt:
 
     libraryDependencies += "fi.sn127" %% "utils-fs" % "0.8.0"
-    libraryDependencies += "fi.sn127" %% "utils-testing" % "0.5.1"
+    libraryDependencies += "fi.sn127" %% "utils-testing" % "0.6.0"
 
 For release information and version history details, see [CHANGELOG](./CHANGELOG.md).
 
