@@ -18,11 +18,11 @@
 
 ## Documentation
 
- * [docs/dirsuite.md](./docs/dirsuite.md) has some general information about dirsuite
- * [docs/howto.md](./docs/howto.md) has examples against dirsuite's own tests
+ * [docs/dirsuite.md](./docs/dirsuite.md) has general information about dirsuite and how to use it
+ * [docs/howto.md](./docs/howto.md) has links and explanation to example project and it's test cases.
  * Example test setup with DirSuite:
-   * [example-tests](./examples/tests/)
-   * [example-DirSuite](./examples/src/test/scala/DirSuiteDemo.scala)
+   * [tests](./examples/tests/) Example test corpus
+   * [DirSuiteDemo](./examples/src/test/scala/DirSuiteDemo.scala) Demo setup against example test corpus.
 
 
 ## Releases
