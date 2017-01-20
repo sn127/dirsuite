@@ -1,5 +1,5 @@
 hello
-success/out.content01.file.txt
+success/out.content01.is-wrong.txt
 1
 This should not be here!
 world
