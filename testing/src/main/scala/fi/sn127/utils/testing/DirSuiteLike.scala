@@ -62,7 +62,7 @@ class TestVectorException(msg: String, cause: Throwable = null) extends DirSuite
 final case class TestVector(reference: Path, output: Path, validator: (Path, Path, Path) => Option[String]) {
 
   @SuppressWarnings(Array("org.wartremover.warts.ToString"))
-  def makeComparatorErrMsg(prefix: String, tc: TestCase) = {
+  def makeComparatorErrMsg(prefix: String, tc: TestCase) : String = {
     prefix + "\n" +
       "   with name: [" + tc.name + "]\n" +
       "   with execution sequence:\n" +
@@ -83,7 +83,7 @@ final case class TestVector(reference: Path, output: Path, validator: (Path, Pat
 @SuppressWarnings(Array("org.wartremover.warts.ToString"))
 final case class TestCase(testname: Path, execs: Seq[Array[String]], testVectors: Seq[TestVector]){
   val name: String = testname.toString
-  val testPath = testname
+  val testPath: Path = testname
 
   /**
    * Reporting: execs to pretty string
@@ -91,7 +91,7 @@ final case class TestCase(testname: Path, execs: Seq[Array[String]], testVectors
    * @return execs as pretty string
    */
   def execsToString(prefix: String): String = {
-    execs.zipWithIndex
+      execs.zipWithIndex
       .map({ case (args, idx) =>
         prefix + " %d:".format(idx) + " [" + args.mkString("", ",", "") + "]"
       }).mkString("\n")
@@ -104,7 +104,7 @@ final case class TestCase(testname: Path, execs: Seq[Array[String]], testVectors
    * @param realArgs actual arguments which were used to execute failing step ([[DirSuite.mapArgs]])
    * @return error message as pretty string
    */
-  def makeExecFailMsg(prefix: String, idx: Int, realArgs: Array[String]) = {
+  def makeExecFailMsg(prefix: String, idx: Int, realArgs: Array[String]) : String = {
     prefix + "\n" +
       "   name: " + name + "]\n" +
       "   with execution sequence:\n" +
@@ -319,7 +319,7 @@ trait DirSuiteLike extends FunSuiteLike {
   protected def registerDirSuiteTestCase(
     pattern: FindFilesPattern,
     tc: TestCase,
-    testFuns: List[(Array[String]) => Any]) = {
+    testFuns: List[(Array[String]) => Any]): Unit = {
 
     registerTest(pattern.toString + " => " + tc.name.toString) {
       testCaseExecutor(tc, testFuns)
@@ -337,7 +337,7 @@ trait DirSuiteLike extends FunSuiteLike {
    * @param pattern which was used to find current test case
    * @param testname full path to test case
    */
-  protected def registerIgnoredDirSuiteTestCase(pattern: FindFilesPattern, testname: Path) = {
+  protected def registerIgnoredDirSuiteTestCase(pattern: FindFilesPattern, testname: Path): Unit = {
     registerIgnoredTest(pattern.toString + " => " + testname.toString) {}
   }
 
@@ -351,7 +351,7 @@ trait DirSuiteLike extends FunSuiteLike {
    * @param testPattern pattern to find test cases
    * @param testFun test function to run with test cases
    */
-  def ignoreDirSuiteTestCases(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)) = {
+  def ignoreDirSuiteTestCases(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)): Unit = {
     val fu = FileUtils(basedir.getFileSystem)
     val testnames = fu.findFiles(basedir, testPattern)
 
@@ -371,7 +371,7 @@ trait DirSuiteLike extends FunSuiteLike {
    */
   def ignoreDualAssertionDirSuiteTestCases(basedir: Path, testPattern: FindFilesPattern)(
     beginTestFun: (Array[String] => Any),
-    lastTestFun: (Array[String] => Any)) = {
+    lastTestFun: (Array[String] => Any)): Unit = {
 
     val fu = FileUtils(basedir.getFileSystem)
     val testnames = fu.findFiles(basedir, testPattern)
@@ -404,10 +404,10 @@ trait DirSuiteLike extends FunSuiteLike {
 
     if (testnames.isEmpty) {
       throw new DirSuiteException("=>\n" +
-        " " * 3 + "DirSuite is empty - there are no exec-files!\n" +
+        " " * 3 + "DirSuite test set is empty - there are no exec-files!\n" +
         " " * 6 + "basedir: [" + basedir.toString + "]\n" +
         " " * 6 + "pattern: " + testPattern.toString + "\n" +
-        " " * 3 + "if this is intentional, you could ignore it"
+        " " * 3 + "if this is intentional, then change test set to be ignored (run -> ignore)."
         )
     }
 
@@ -459,7 +459,7 @@ trait DirSuiteLike extends FunSuiteLike {
    * @param testPattern pattern of test cases
    * @param testFun test function which is used to test each test case
    */
-  def runDirSuiteTestCases(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)) = {
+  def runDirSuiteTestCases(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)): Unit = {
 
     getDirSuiteTestCases(basedir, testPattern).foreach(tc => {
       registerDirSuiteTestCase(testPattern, tc, List[(Array[String] => Any)](testFun))
@@ -521,7 +521,7 @@ trait DirSuiteLike extends FunSuiteLike {
     if (tc.execs.length < testFuns.length) {
       throw new DirSuiteException("=>\n" +
         " " * 3 + "Exec line count is less than test function count. This is not supported!\n" +
-        " " * 6 + "testname: " + tc.testname + "\n"
+        " " * 6 + "testname: " + tc.testname.toString + "\n"
       )
     }
     /*

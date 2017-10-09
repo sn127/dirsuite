@@ -267,7 +267,7 @@ final case class FileUtils(filesystem: FileSystem) {
    * @param basepath
    * @return
    */
-  protected def basepathGlob(glob: String, basepath: Path) = {
+  protected def basepathGlob(glob: String, basepath: Path): String = {
     // globStartChar := '*' | '?' | '{' | '[' | os.pathSep | '.'
     val pathSepRgx = getEscapedFileSeparatorChar
     val regex = "^glob:((\\*)|(\\?)|(\\{)|(\\[)|(" + pathSepRgx + ")|(\\.)).*"

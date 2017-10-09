@@ -6,7 +6,7 @@ object Dependencies {
    * Versions
    */
   val scalaArmVersion = "2.0"
-  val scalatestVersion = "3.0.1"
+  val scalatestVersion = "3.0.4"
 
   /*
    * Libraries: scala
