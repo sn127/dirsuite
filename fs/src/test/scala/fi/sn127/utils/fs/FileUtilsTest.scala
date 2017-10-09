@@ -27,9 +27,9 @@ import scala.util.{Failure, Success}
   "org.wartremover.warts.NonUnitStatements"))
 class FileUtilsTest extends FlatSpec with Matchers with Inside {
 
-  val filesystem = FileSystems.getDefault
-  val testDirPath = filesystem.getPath("tests/globtree").toAbsolutePath.normalize
-  val fu = FileUtils(filesystem)
+  private val filesystem = FileSystems.getDefault
+  private val testDirPath = filesystem.getPath("tests/globtree").toAbsolutePath.normalize
+  private val fu = FileUtils(filesystem)
 
   "getExeDir" must "work" in {
     assert(fu.getExeDir(getClass).getFileName.toString === "test-classes")

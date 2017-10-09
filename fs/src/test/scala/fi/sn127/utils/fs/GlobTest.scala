@@ -18,7 +18,6 @@ package fi.sn127.utils.fs
 
 import java.nio.file.{FileSystems, Path, Paths}
 
-import org.scalatest.PrivateMethodTester.PrivateMethod
 import org.scalatest.{FlatSpec, Inside, Matchers, PrivateMethodTester}
 
 class FindFilesPatternTest extends FlatSpec with Matchers with Inside with PrivateMethodTester {
@@ -35,9 +34,9 @@ class FindFilesPatternTest extends FlatSpec with Matchers with Inside with Priva
   "org.wartremover.warts.ToString",
   "org.wartremover.warts.NonUnitStatements"))
 class BasepathGlobTest extends FlatSpec with Matchers with Inside with PrivateMethodTester {
-  val basepath = Paths.get("/foo/bar/")
-  val fu = FileUtils(basepath.getFileSystem)
-  val basepathGlob = PrivateMethod[FileUtils]('basepathGlob)
+  private val basepath = Paths.get("/foo/bar/")
+  private val fu = FileUtils(basepath.getFileSystem)
+  private val basepathGlob = PrivateMethod[FileUtils]('basepathGlob)
 
   "basepathGlob" should "leave abs path alone" in {
     val doNotTouch = "glob:/some/abs/path/*.txt"
@@ -93,9 +92,9 @@ class BasepathGlobTest extends FlatSpec with Matchers with Inside with PrivateMe
   "org.wartremover.warts.ToString",
   "org.wartremover.warts.NonUnitStatements"))
 class BasepathRegexTest extends FlatSpec with Matchers with Inside with PrivateMethodTester {
-  val basepath = Paths.get("/foo/bar/")
-  val fu = FileUtils(basepath.getFileSystem)
-  val basepathRegex = PrivateMethod[FileUtils]('basepathRegex)
+  private val basepath = Paths.get("/foo/bar/")
+  private val fu = FileUtils(basepath.getFileSystem)
+  private val basepathRegex = PrivateMethod[FileUtils]('basepathRegex)
 
   "basepathRegex" should "leave abs path alone" in {
     val doNotTouch = "regex:/some/abs/path/.*\\.txt"
@@ -158,9 +157,8 @@ class BasepathRegexTest extends FlatSpec with Matchers with Inside with PrivateM
 @SuppressWarnings(Array(
   "org.wartremover.warts.ToString"))
 class SpecialFindFilesTest extends FlatSpec with Matchers with Inside with PrivateMethodTester {
-  val testDirPath = Paths.get("tests/globtree").toAbsolutePath.normalize()
-  val fu = FileUtils(testDirPath.getFileSystem)
-  val fsEntryMapper = PrivateMethod[FileUtils]('fsEntryMapper)
+  private val testDirPath = Paths.get("tests/globtree").toAbsolutePath.normalize()
+  private val fu = FileUtils(testDirPath.getFileSystem)
 
   "fsEntryMapper" should "do /dev/null" in {
     val fsEntryMapper = PrivateMethod[FileUtils]('fsEntryMapper)
@@ -190,8 +188,8 @@ class SpecialFindFilesTest extends FlatSpec with Matchers with Inside with Priva
   "org.wartremover.warts.Equals"))
 class WildcardInputTest extends FlatSpec with Matchers with Inside {
 
-  val testDirPath = Paths.get("tests/globtree").toAbsolutePath.normalize()
-  val fu = FileUtils(testDirPath.getFileSystem)
+  private val testDirPath = Paths.get("tests/globtree").toAbsolutePath.normalize()
+  private val fu = FileUtils(testDirPath.getFileSystem)
 
   /*
    * This tests expect working directory to be top level project dir.
@@ -217,12 +215,14 @@ class WildcardInputTest extends FlatSpec with Matchers with Inside {
         })
   }
 
+  /*
   private def printpaths(ps: Seq[Path]) = {
     println("SIZE: " + "%d".format(ps.size))
     ps.foreach(p => {
       println("PATH: " + p.toString)
     })
   }
+  */
 
   "glob" should "match plain file (e.g. 'file.ext')" in {
     val refPaths = Seq(

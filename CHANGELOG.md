@@ -10,6 +10,16 @@ Latest releases (for scala 2.12) are:
  * utils-fs: 0.8.0
  * utils-testing: 0.6.0
 
+#### fs:0.X.0, testing:0.Y.0
+
+ - build:
+   - SBT 1.0
+   - Scala 2.12.3
+ - fs:
+ - testing:
+   - ScalaTest: 3.0.4
+
+
 #### fs:0.8.0, testing:0.6.0
 
  - fs:

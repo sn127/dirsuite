@@ -17,7 +17,7 @@
 package fi.sn127.utils.testing
 
 import java.nio.charset.StandardCharsets
-import java.nio.file.{FileSystems, Files}
+import java.nio.file.{FileSystem, FileSystems, Files, Path}
 
 import org.scalatest.events.{Event, TestFailed}
 import org.scalatest.exceptions.TestFailedException
@@ -43,15 +43,15 @@ import fi.sn127.utils.fs.{FileUtils, Glob, Regex}
   "org.wartremover.warts.NonUnitStatements"))
 class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
 
-  val filesystem = FileSystems.getDefault
-  val testdir = filesystem.getPath("tests/dirsuite").toAbsolutePath.normalize
-  val fu = FileUtils(filesystem)
+  val filesystem: FileSystem = FileSystems.getDefault
+  val testdir: Path = filesystem.getPath("tests/dirsuite").toAbsolutePath.normalize
+  val fu: FileUtils = FileUtils(filesystem)
 
   object DummyProg {
     // negative values so that these won't mix up
     // with arg list lengths
-    val SUCCESS = -1
-    val FAILURE = -2
+    val SUCCESS: Int = -1
+    val FAILURE: Int = -2
 
     def mainSuccess(args: Array[String]): Int = {
       SUCCESS
@@ -370,7 +370,7 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   it must "detect plain asserts" in {
     class TestRunner extends DirSuiteLike {
       runDirSuiteTestCases(testdir, Regex("failure/tr[0-9]+\\.exec")) { args: Array[String] =>
-         scala.Predef.assert(DummyProg.SUCCESS == DummyProg.mainFail(args))
+         scala.Predef.assert(DummyProg.SUCCESS === DummyProg.mainFail(args))
       }
     }
     val t = new TestRunner
@@ -412,7 +412,7 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   it must "detect missing dirsuite-tree" in {
     val ex = intercept[DirSuiteException] {
       class TestRunner extends DirSuiteLike {
-        val not_there = fu.getPath(testdir.toString, "dirsuite-tree-is-not-there")
+        val not_there: Path = fu.getPath(testdir.toString, "dirsuite-tree-is-not-there")
         runDirSuiteTestCases(not_there, Regex("failure/missing[0-9]+\\.exec")) { args: Array[String] =>
           assertResult(DummyProg.SUCCESS) {
             DummyProg.mainSuccess(args)
