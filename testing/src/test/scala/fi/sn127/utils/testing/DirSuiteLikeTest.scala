@@ -23,7 +23,7 @@ import org.scalatest.events.{Event, TestFailed}
 import org.scalatest.exceptions.TestFailedException
 import org.scalatest.{Args, FlatSpec, Inside, Matchers, Reporter}
 
-import fi.sn127.utils.fs.{FileUtils, Glob, Regex}
+import better.files._
 
 /**
  * How to test the Testers?
@@ -45,7 +45,6 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
 
   val filesystem: FileSystem = FileSystems.getDefault
   val testdir: Path = filesystem.getPath("tests/dirsuite").toAbsolutePath.normalize
-  val fu: FileUtils = FileUtils(filesystem)
 
   object DummyProg {
     // negative values so that these won't mix up
@@ -77,7 +76,7 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
     }
 
     def mainTxt(args: Array[String]): Int = {
-      val output = fu.getPath(testdir.toString, args(0))
+      val output = (File(testdir) / args(0)).path
       Files.write(output, args
           .mkString("hello\n", "\n", "\nworld\n")
           .getBytes(StandardCharsets.UTF_8))
@@ -85,7 +84,7 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
     }
 
     def mainXml(args: Array[String]): Int = {
-      val output = fu.getPath(testdir.toString, args(0))
+      val output = (File(testdir) / args(0)).path
       Files.write(output, args
         .mkString("<hello><arg>", "</arg><arg>", "</arg></hello>\n")
         .getBytes(StandardCharsets.UTF_8))
@@ -412,7 +411,7 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   it must "detect missing dirsuite-tree" in {
     val ex = intercept[DirSuiteException] {
       class TestRunner extends DirSuiteLike {
-        val not_there: Path = fu.getPath(testdir.toString, "dirsuite-tree-is-not-there")
+        val not_there: Path = (File(testdir) / "dirsuite-tree-is-not-there").path
         runDirSuiteTestCases(not_there, Regex("failure/missing[0-9]+\\.exec")) { args: Array[String] =>
           assertResult(DummyProg.SUCCESS) {
             DummyProg.mainSuccess(args)

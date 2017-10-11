@@ -46,6 +46,7 @@ lazy val testing = (project in file("testing")).
     version := "0.6.0",
     isSnapshot := false,
     fork in run := true,
+    libraryDependencies += betterFiles,
     libraryDependencies += scalaArm,
     libraryDependencies += scalatest
   )
