@@ -1,15 +1,16 @@
 # Changes
 
-Utils-fs and utils-testing projects use [semantic versioning](http://semver.org/).
+Utils-testing project uses [semantic versioning](http://semver.org/).
 
 
 ## Releases
 
 Latest releases (for scala 2.12) are:
 
- * utils-testing: 0.Y.0
+ * utils-testing: 0.6.0
+ * utils-fs: 0.8.0
 
-#### testing:0.Y.0
+#### testing:0.7.0-SNAPSHOT
 
  - fs:
     - fs functionality has been moved to [better-files](https://github.com/pathikrit/better-files).

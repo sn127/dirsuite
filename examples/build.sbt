@@ -1,7 +1,6 @@
 
 name := "DirSuiteExample"
 
-scalaVersion := "2.12.1"
+scalaVersion := "2.12.3"
 
-libraryDependencies += "fi.sn127" %% "utils-testing" % "0.6.0" % "test"
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test"
+libraryDependencies += "fi.sn127" %% "utils-testing" % "0.7.0-SNAPSHOT" % "test"

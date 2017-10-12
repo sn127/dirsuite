@@ -1,7 +1,7 @@
 
 import java.nio.file.Paths
 
-import fi.sn127.utils.fs.{Glob, Regex}
+import fi.sn127.utils.testing.{Glob, Regex}
 import fi.sn127.utils.testing.DirSuite
 
 class DirSuiteDemo extends DirSuite {
