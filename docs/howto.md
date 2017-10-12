@@ -1,7 +1,8 @@
 # How to use DirSuite
 
 Under examples are three demo DirSuites, which demonstrates 
-different aspects of DirSuite:
+different aspects of DirSuite. These are runnable projects,
+just run `sbt test` on `examples`-directory.
 
  * [test cases](../examples/tests/) Test cases which are used by examples. 
 

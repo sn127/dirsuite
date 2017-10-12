@@ -1,6 +1,6 @@
 import java.nio.file.Paths
 
-import fi.sn127.utils.fs.{Glob, Regex}
+import fi.sn127.utils.testing.{Glob, Regex}
 import fi.sn127.utils.testing.DirSuite
 
 class FailureDemo extends DirSuite {
@@ -12,7 +12,7 @@ class FailureDemo extends DirSuite {
    * failing at the moment.
    *
    * To see actual errors, change these to
-   * ignoreDirSuite => runDirSuite
+   * ignoreDirSuiteTestCases => runDirSuiteTestCases
    */
 
 

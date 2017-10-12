@@ -18,13 +18,10 @@ package fi.sn127.utils.testing
 
 import java.nio.file.Path
 
+import better.files._
 import org.scalatest.FunSuiteLike
 import org.scalatest.exceptions.TestFailedException
 import resource._
-
-import scala.util.{Failure, Success}
-
-import fi.sn127.utils.fs.{FileUtils, FindFilesPattern, Glob}
 
 /**
  * Generic exception class for DirSuite.
@@ -239,17 +236,18 @@ trait DirSuiteLike extends FunSuiteLike {
    *
    *    findFiles("/path/to/dirsuite/testcase", Glob("test01.ref.*"))
    *
-   * @param testdir
+   * @param testdir top level directory from where to look
    * @param testname
    * @return
    */
   protected def findReferences(testdir: Path, testname: Path): Seq[Path] = {
-    val fu = FileUtils(testdir.getFileSystem)
-    val basename = fu.getBasename(testname) match {
-      case (name, ext) => name
-    }
+    // TODO Check this logic (e.g. should File's testdir achor be based on testname?
+    val basename = File(testname).nameWithoutExtension(true)
 
-    fu.findFiles(testdir, Glob(basename + ".ref.*"))
+    File(testdir)
+      .glob(basename + ".ref.*")(visitOptions = File.VisitOptions.follow)
+      .map(f => f.path)
+      .toSeq
   }
 
   /**
@@ -272,13 +270,11 @@ trait DirSuiteLike extends FunSuiteLike {
    * @return full path to mapped output file path
    */
   protected def mapOutput(testdir: Path, testname: Path, reference: Path): Path = {
-    val fu = FileUtils(testdir.getFileSystem)
-    val basename = fu.getBasename(testname) match {
-      case (name, ext) => name
-    }
+
+    val basename = File(testname).nameWithoutExtension(true)
 
     val output = "out." + basename + "." + reference.getFileName.toString.stripPrefix(basename + ".ref.")
-    fu.getPath(testdir.toString, output)
+    (File(testdir) / output).path
   }
 
   /**
@@ -294,15 +290,12 @@ trait DirSuiteLike extends FunSuiteLike {
    * @return Validator for this test vector
    */
   protected def selectValidator(testname: Path, reference: Path, output: Path): ((Path, Path, Path) => Option[String]) = {
-    val fu = FileUtils(testname.getFileSystem)
 
-    val refExt = fu.getBasename(reference)
+    val refExt = File(reference).extension(includeDot = false, includeAll = false, toLowerCase = true)
     refExt match {
-      case (_, ext) => ext match {
-        case Some("txt") => TestValidator.txtValidator
-        case Some("xml") => TestValidator.xmlValidator
-        case _ => TestValidator.txtValidator
-      }
+      case Some("txt") => TestValidator.txtValidator
+      case Some("xml") => TestValidator.xmlValidator
+      case _ => TestValidator.txtValidator
     }
   }
 
@@ -341,6 +334,13 @@ trait DirSuiteLike extends FunSuiteLike {
     registerIgnoredTest(pattern.toString + " => " + testname.toString) {}
   }
 
+  private def findFiles(basedir: Path, testPattern: FindFilesPattern): Files = {
+    testPattern match {
+      case glob: Glob => File(basedir).glob(glob.glob)
+      case regex: Regex => File(basedir).globRegex(regex.regex.r)
+    }
+  }
+
   /**
    * Ignore these dirSuite tests.
    *
@@ -352,10 +352,11 @@ trait DirSuiteLike extends FunSuiteLike {
    * @param testFun test function to run with test cases
    */
   def ignoreDirSuiteTestCases(basedir: Path, testPattern: FindFilesPattern)(testFun: (Array[String] => Any)): Unit = {
-    val fu = FileUtils(basedir.getFileSystem)
-    val testnames = fu.findFiles(basedir, testPattern)
 
-    testnames.foreach(test => registerIgnoredDirSuiteTestCase(testPattern, test))
+    findFiles(basedir, testPattern)
+      .foreach(test =>
+        registerIgnoredDirSuiteTestCase(testPattern, test.path)
+      )
   }
 
   /**
@@ -373,10 +374,10 @@ trait DirSuiteLike extends FunSuiteLike {
     beginTestFun: (Array[String] => Any),
     lastTestFun: (Array[String] => Any)): Unit = {
 
-    val fu = FileUtils(basedir.getFileSystem)
-    val testnames = fu.findFiles(basedir, testPattern)
-
-    testnames.foreach(test => registerIgnoredDirSuiteTestCase(testPattern, test))
+    findFiles(basedir, testPattern)
+      .foreach(test =>
+        registerIgnoredDirSuiteTestCase(testPattern, test.path)
+      )
   }
 
   /**
@@ -388,19 +389,16 @@ trait DirSuiteLike extends FunSuiteLike {
    * @return found test cases
    */
   protected def getDirSuiteTestCases(basedir: Path, testPattern: FindFilesPattern): Seq[TestCase] = {
-    val fu = FileUtils(basedir.getFileSystem)
 
-    fu.ensurePath(basedir) match {
-      case Success(ok) =>
-      case Failure(ex) => throw new DirSuiteException("=>\n" +
+    val td = File(basedir)
+    if (!td.isDirectory || td.isEmpty) {
+      throw new DirSuiteException("=>\n" +
         " " * 3 + "The basedir for DirSuite is invalid\n" +
-        " " * 6 + "basedir: [" + basedir.toString + "]\n" +
-        " " * 6 + "Exception: " + ex.getClass.getCanonicalName + "\n" +
-        " " * 9 + "Msg: " + ex.getMessage + "\n"
+        " " * 6 + "basedir: [" + basedir.toString + "]\n"
       )
     }
 
-    val testnames = fu.findFiles(basedir, testPattern)
+    val testnames = findFiles(basedir, testPattern)
 
     if (testnames.isEmpty) {
       throw new DirSuiteException("=>\n" +
@@ -411,7 +409,7 @@ trait DirSuiteLike extends FunSuiteLike {
         )
     }
 
-    val testCases = testnames.map(testname => {
+    val testCases = testnames.map(_.path).map(testname => {
       val testdir = testname.getParent
 
       val execs = parseExec(testname)
@@ -433,7 +431,7 @@ trait DirSuiteLike extends FunSuiteLike {
 
       TestCase(testname, execs, testVectors)
     })
-    testCases
+    testCases.toSeq
   }
 
   /**

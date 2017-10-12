@@ -215,10 +215,10 @@ DirSuite Regex and Glob behaves as Java Regex and Glob, with twist.
   * [Java Regex](https://docs.oracle.com/javase/tutorial/essential/regex/index.html)
   * [Java Glob](https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob)
 
-The Twist: DirSuite uses `utils-fs:FileUtils::findFiles(basedir, pattern)` to find files.
+The Twist: DirSuite uses `better-files.glob and regex` to find files.
 If pattern is NOT absolute path, and it does not start with Regex/Glob special  character, 
-then basepath and pattern are "cooked" together. That means that you don't need will card 
-match at beging of your pattern. E.g.
+then basepath and pattern are combined together. That means that you don't need wildcard 
+matching at the beginning of your pattern. E.g.
 
     // testdir == "/path/to/some/dir/tests"
     val testdir = Paths.get("tests").toAbsolutePath.normalize
