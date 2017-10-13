@@ -18,18 +18,10 @@ lazy val commonSettings = Seq(
   )
 )
 
-lazy val utils = (project in file(".")).
-  aggregate(testing).
-  settings(
-    isSnapshot := false,
-    publish := {},
-    publishLocal := {}
-  )
-
-lazy val testing = (project in file("testing")).
+lazy val dirsuite = (project in file(".")).
   settings(commonSettings: _*).
   settings(
-    name := "utils-testing",
+    name := "dirsuite",
     version := "0.7.0-SNAPSHOT",
     isSnapshot := false,
     fork in run := true,

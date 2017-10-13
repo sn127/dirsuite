@@ -1,4 +1,4 @@
 
-This is default directory and test tree to used to test 
-utils-fs and utils-testing packages.
+This is default directory and test tree which is to used to test 
+dirsuite itself.
 

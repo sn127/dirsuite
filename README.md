@@ -1,19 +1,13 @@
-[![Join the chat at https://gitter.im/sn127/utils](https://badges.gitter.im/sn127/utils.svg)](https://gitter.im/sn127/utils)
-[![Build Status](https://travis-ci.org/sn127/utils.svg?branch=master)](https://travis-ci.org/sn127/utils)
-[![Coverage Status](https://coveralls.io/repos/github/sn127/utils/badge.svg?branch=master)](https://coveralls.io/github/sn127/utils?branch=master)
+[![Build Status](https://travis-ci.org/sn127/dirsuite.svg?branch=master)](https://travis-ci.org/sn127/dirsuite)
+[![Coverage Status](https://coveralls.io/repos/github/sn127/dirsuite/badge.svg?branch=master)](https://coveralls.io/github/sn127/dirsuite?branch=master)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/fi.sn127/dirsuite_2.12/badge.svg?style=plastic)](https://maven-badges.herokuapp.com/maven-central/fi.sn127/dirsuite_2.12)
+[![Javadocs](http://javadoc.io/badge/fi.sn127/dirsuite_2.12.svg?color=blue)](http://javadoc.io/doc/fi.sn127/dirsuite_2.12)
 
- * utils-fs: [![Maven Central](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-fs_2.12/badge.svg?style=plastic)](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-fs_2.12)[![Javadocs](http://javadoc.io/badge/fi.sn127/utils-fs_2.12.svg?color=blue)](http://javadoc.io/doc/fi.sn127/utils-fs_2.12)
- * utils-testing: [![Maven Central](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-testing_2.12/badge.svg?style=plastic)](https://maven-badges.herokuapp.com/maven-central/fi.sn127/utils-testing_2.12)[![Javadocs](http://javadoc.io/badge/fi.sn127/utils-testing_2.12.svg?color=blue)](http://javadoc.io/doc/fi.sn127/utils-testing_2.12)
+# DirSuite test framework and add-on for ScalaTest
 
-# Utils (DirSuite add-on to ScalaTest)
 
- * utils-fs
-   - java.nio.{Files,Paths} path manipulating utilities
-   - Recursive findFiles with glob and regex pattern matching
- * utils-testing
-   - DirSuite add-on to ScalaTest. DirSuite can run (huge) collection of tests
-     which are defined on filesystem. Arguments, inputs and expected reference output
-     files are defined by test directory.
+DirSuite add-on to ScalaTest. DirSuite can run (huge) collection of tests which are defined on filesystem. 
+Arguments, inputs and expected reference output files are defined by test directory.
 
 
 ## Documentation
@@ -32,13 +26,12 @@ Release artifacts are published on the maven
 
 Library configuration for sbt:
 
-    libraryDependencies += "fi.sn127" %% "utils-fs" % "0.8.0"
-    libraryDependencies += "fi.sn127" %% "utils-testing" % "0.6.0"
+    libraryDependencies += "fi.sn127" %% "dirsuite" % "0.7.0"
 
 For release information and version history details, see [CHANGELOG](./CHANGELOG.md).
 
 
-## Contributing to Utils
+## Contributing to DirSuite
 
 Contributions to the project are most welcome. Please see 
 [CONTRIBUTING](./CONTRIBUTING.md) how you could help. 

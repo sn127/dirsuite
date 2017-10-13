@@ -19,34 +19,44 @@ package fi.sn127.utils.testing
 import java.nio.file.Path
 
 import better.files._
+import org.scalactic.source.Position
 import org.scalatest.FunSuiteLike
-import org.scalatest.exceptions.TestFailedException
+import org.scalatest.exceptions.{StackDepthException, TestFailedException}
 import resource._
 
 /**
- * Generic exception class for DirSuite.
+ * Generic exception class for DirSuite. This is typically thrown in
+ * cases when there is something broken about dirsuite setup.
+ *
  * @param msg message
- * @param cause if there was underlaying exception
+ * @param cause if there was underlying exception
  */
-@SuppressWarnings(Array(
-"org.wartremover.warts.Null",
-"org.wartremover.warts.DefaultArguments"))
-class DirSuiteException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause) {}
+class DirSuiteException(msg: String, cause: Option[Throwable]) extends
+  TestFailedException(
+    { _: StackDepthException => Some(msg) },
+    cause,
+    Left[Position, (StackDepthException) => Int](Position("", "", 0)),
+    None
+  )
 
 /**
  * Exception class for testvector validation errors. Validator is NOT supposed
  * throw this, but to use Option[String] to report test vector failures.
  *
  * Typically this is thrown in case that output files is not found, or there was
- * a format bases exception (output is not syntactically correct, e.g. JSON/XML SAX errors).
+ * an exception because of content of output (output is not syntactically correct,
+ * e.g. JSON/XML SAX errors).
  *
  * @param msg message
- * @param cause if there was underlaying exception
+ * @param cause if there was underlying exception
  */
-@SuppressWarnings(Array(
-  "org.wartremover.warts.Null",
-  "org.wartremover.warts.DefaultArguments"))
-class TestVectorException(msg: String, cause: Throwable = null) extends DirSuiteException(msg, cause)
+class TestVectorException(msg: String, cause: Option[Throwable]) extends
+  TestFailedException(
+    { _: StackDepthException => Some(msg) },
+    cause,
+    Left[Position, (StackDepthException) => Int](Position("", "", 0)),
+    None
+  )
 
 /**
  * Eech test vector contains one input/output pair and validator-method to validate
@@ -162,7 +172,7 @@ trait DirSuiteLike extends FunSuiteLike {
 
       if (rawArgs.size < 2) {
         // TODO: Exception, not nice
-        throw new DirSuiteException("Exec line is not terminated with ';': [" + execLine + "]")
+        throw new DirSuiteException("Exec line is not terminated with ';': [" + execLine + "]", None)
       } else {
         val sgrAwar = rawArgs.reverse
         val last = sgrAwar.head
@@ -170,7 +180,7 @@ trait DirSuiteLike extends FunSuiteLike {
           // there is trailing stuff after last ';',
           // so it could be missed semi-colon
           // TODO: Exception, not nice
-          throw new DirSuiteException("Exec line is not terminated with ';': [" + execLine + "]")
+          throw new DirSuiteException("Exec line is not terminated with ';': [" + execLine + "]", None)
         } else {
           // drop "last", and return list in correct order
           sgrAwar.drop(1).reverse
@@ -394,8 +404,8 @@ trait DirSuiteLike extends FunSuiteLike {
     if (!td.isDirectory || td.isEmpty) {
       throw new DirSuiteException("=>\n" +
         " " * 3 + "The basedir for DirSuite is invalid\n" +
-        " " * 6 + "basedir: [" + basedir.toString + "]\n"
-      )
+        " " * 6 + "basedir: [" + basedir.toString + "]\n",
+        None)
     }
 
     val testnames = findFiles(basedir, testPattern)
@@ -405,8 +415,8 @@ trait DirSuiteLike extends FunSuiteLike {
         " " * 3 + "DirSuite test set is empty - there are no exec-files!\n" +
         " " * 6 + "basedir: [" + basedir.toString + "]\n" +
         " " * 6 + "pattern: " + testPattern.toString + "\n" +
-        " " * 3 + "if this is intentional, then change test set to be ignored (run -> ignore)."
-        )
+        " " * 3 + "if this is intentional, then change test set to be ignored (run -> ignore).",
+        None)
     }
 
     val testCases = testnames.map(_.path).map(testname => {
@@ -417,8 +427,8 @@ trait DirSuiteLike extends FunSuiteLike {
         throw new DirSuiteException("=>\n" +
           " " * 3 + "Exec for test is empty - there is nothing to run!\n" +
           " " * 6 + "basedir: [" + basedir.toString + "]\n" +
-          " " * 6 + "testname: [" + testname.toString + "]\n"
-        )
+          " " * 6 + "testname: [" + testname.toString + "]\n",
+          None)
       }
 
       val testVectors = findReferences(testdir, testname)
@@ -519,8 +529,8 @@ trait DirSuiteLike extends FunSuiteLike {
     if (tc.execs.length < testFuns.length) {
       throw new DirSuiteException("=>\n" +
         " " * 3 + "Exec line count is less than test function count. This is not supported!\n" +
-        " " * 6 + "testname: " + tc.testname.toString + "\n"
-      )
+        " " * 6 + "testname: " + tc.testname.toString + "\n",
+        None)
     }
     /*
       Bake execs with testfuns
@@ -550,13 +560,20 @@ trait DirSuiteLike extends FunSuiteLike {
               Option("" +
                 tc.makeExecFailMsg(DirSuiteLike.executionFailureMsgPrefix, index, execArgs) +
                 " " * 3 + "Failed result: \n" +
-                " " * 6 + origMsg.getOrElse("") + "\n")
+                " " * 6 + origMsg.getOrElse("") + "\nPosition: ")
             })
-          case ex: Exception =>
-            throw new DirSuiteException("" +
+          case ex: Exception => {
+            val msg = "" +
               tc.makeExecFailMsg(DirSuiteLike.executionFailureMsgPrefix, index, execArgs) +
-              " " * 3 + "Failed result: \n" +
-              " " * 6 + ex.getMessage + "\n", ex)
+              " " * 3 + "Exception: \n" +
+              " " * 6 + ex.getClass.getName + "\n" +
+              " " * 3 + "Message: \n" +
+              " " * 6 + ex.getMessage + "\n" +
+              " " * 3 + "Cause: \n" +
+              " " * 6 + ex.getStackTrace.toSeq.map(e => e.toString).take(3).mkString("", "\n" + " " * 6, "\n" + " " * 6 + "...\nPosition: ")
+
+            throw new DirSuiteException(msg, Some(ex))
+          }
         }
     })
 
@@ -564,7 +581,7 @@ trait DirSuiteLike extends FunSuiteLike {
      * validate test vectors
      */
     tc.testVectors.foreach({ testVector =>
-      val compErrorMsg = try {
+      val compErrorMsg: Option[String] = try {
 
         /* this is real deal for test result validation */
         val compResult = testVector.validator(tc.testname, testVector.reference, testVector.output)
@@ -572,20 +589,21 @@ trait DirSuiteLike extends FunSuiteLike {
         compResult.map(msg =>
           testVector.makeComparatorErrMsg(DirSuiteLike.testVectorFailureMsgPrefix, tc) + "\n" +
             " " * 3 + "Comparator: \n" +
-            " " * 6 + "msg: " + msg + "\n"
+            " " * 6 + "msg: " + msg + "\nPosition: "
         )
       } catch {
         case ex: Exception => Some(
           testVector.makeComparatorErrMsg(DirSuiteLike.testVectorExceptionMsgPrefix, tc) + "\n" +
             " " * 3 + "Exception: \n" +
             " " * 6 + "cause: " + ex.getClass.getCanonicalName + "\n" +
-            " " * 6 + "msg: " + ex.getMessage + "\n"
+            " " * 6 + "msg: " + ex.getMessage + "\nPosition: "
         )
       }
       // NOTE: Collect all comp results, and report all end results together (Cats ...)?
-      if (compErrorMsg.nonEmpty) {
-        throw new TestVectorException(compErrorMsg.getOrElse("Internal error in test framework (ex)!"))
-      }
+      compErrorMsg.foreach(s => {
+        throw new TestVectorException(s, None)
+        () // Inferred type containing Nothing
+      })
     })
   }
 }

@@ -30,19 +30,15 @@ Contributions to the project are most welcome!
 
  5. Explore code
     
-    Directory structure follows maven's layout and there are two sub-project utils-fs and utils-testing
-    
-    * [utils-fs](./fs)
-      - utils-fs main code: [./fs/src/main/scala/fi/sn127/utils/fs](./fs/src/main/scala/fi/sn127/utils/fs)
-      - utils-fs test code: [./fs/src/test/scala/fi/sn127/utils/fs](./fs/src/test/scala/fi/sn127/utils/fs)
-      
-    * [utils-testing](./testing)
-      - utils-testing main code: [./testing/src/main/scala/fi/sn127/utils/testing](./testing/src/main/scala/fi/sn127/utils/testing)
-      - utils-testing test code: [./testing/src/test/scala/fi/sn127/utils/testing](./testing/src/test/scala/fi/sn127/utils/testing)
-        - [DirSuiteDemo](./testing/src/test/scala/fi/sn127/utils/testing/DirSuiteDemo.scala) is demo how to use DirSuite
-        - [DirSuiteLikeTest](./testing/src/test/scala/fi/sn127/utils/testing/DirSuiteLikeTest.scala) 
+    Directory structure follows maven's layout:
+          
+    * [DirSuite](./)
+      - DirSuite main code: [./src/main/scala/fi/sn127/utils/testing](./src/main/scala/fi/sn127/utils/testing)
+      - DirSuite tests: [./src/test/scala/fi/sn127/utils/testing](./src/test/scala/fi/sn127/utils/testing)
+        - [DirSuiteDemo](./src/test/scala/fi/sn127/utils/testing/DirSuiteDemo.scala) is demo how to use DirSuite
+        - [DirSuiteLikeTest](./src/test/scala/fi/sn127/utils/testing/DirSuiteLikeTest.scala) 
           and the rest of tests are DirSuite's own tests. 
-          These are a bit convoluted,  because tests are testing test-framework.
+          These tests are a bit convoluted,  because they are testing test-framework itself.
     * [tests](./tests) Common test target for both projects 
       - [globree](./tests/globtree) is used for path matching tests
       - [dirsuite](./tests/dirsuite) is DirSuite test collection, which is used to test DirSuite 
