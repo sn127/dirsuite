@@ -160,9 +160,9 @@ class YeOldeDirSuiteSpec extends FlatSpec with Matchers with Inside {
   class ExecutionExceptionReporter extends FailureReporter {
     def isThisGood(ex: Throwable, msg: String): Boolean = {
       ex match {
-        case tfe: TestFailedException =>
-          msg.startsWith(DirSuiteLike.executionFailureMsgPrefix)
         case dex: DirSuiteException =>
+          msg.startsWith(DirSuiteLike.executionFailureMsgPrefix)
+        case tfe: TestFailedException =>
           msg.startsWith(DirSuiteLike.executionFailureMsgPrefix)
         case _ =>
           false
