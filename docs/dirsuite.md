@@ -206,7 +206,7 @@ then exec line tokenizer or the whole exec arg parser can be overridden:
  - `tokenizer` tokenize line after "exec:" to the end of line
  - `parseExec` parses whole exec file
 
-See [API docs](http://javadoc.io/doc/fi.sn127/utils-testing_2.12) or source code for exact arguments and return values for these two.
+See [API docs](http://javadoc.io/doc/fi.sn127/dirsuite_2.12) or source code for exact arguments and return values for these two.
 
 ### Regex or Glob to find exec-files
 
@@ -290,9 +290,6 @@ This validator selection logic and default validators can be replaced by overrid
 
 ### Final words
 
-Comments, Questions? 
-[![Join the chat at https://gitter.im/sn127/utils](https://badges.gitter.im/sn127/utils.svg)](https://gitter.im/sn127/utils)
-
-Or stare long and hard [SN127](https://github.com/sn127) icon, and send an email. :-)
+Comments, Questions? Open a ticket or stare long and hard [SN127](https://github.com/sn127) icon and send an email. :-)
 
 Happy testing!

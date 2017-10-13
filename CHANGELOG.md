@@ -5,17 +5,16 @@ Utils-testing project uses [semantic versioning](http://semver.org/).
 
 ## Releases
 
-Latest releases (for scala 2.12) are:
+Latest release (for scala 2.12) is:
 
- * utils-testing: 0.6.0
- * utils-fs: 0.8.0
+ * dirsuite: 0.7.0
 
-#### testing:0.7.0-SNAPSHOT
+#### 0.7.0
 
  - fs:
     - fs functionality has been moved to [better-files](https://github.com/pathikrit/better-files).
 
- - testing:
+ - DirSuite (former testing):
     - `fi.sn127.utils.fs` -based file utils are removed and replaced with [better-files](https://github.com/pathikrit/better-files) 
     - API-Changes
         - API-Change:testing:chg: `fi.sn127.utils.fs.{Regex, Glob}` are moved under `fi.sn127.utils.testing` package
