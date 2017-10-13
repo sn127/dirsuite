@@ -1,7 +1,7 @@
 import Dependencies._
 
 /**
- * Build settings for utils
+ * Build settings for DirSuite
  */
 
 lazy val commonSettings = Seq(
@@ -22,7 +22,7 @@ lazy val dirsuite = (project in file(".")).
   settings(commonSettings: _*).
   settings(
     name := "dirsuite",
-    version := "0.7.0-SNAPSHOT",
+    version := "0.7.0",
     isSnapshot := false,
     fork in run := true,
     libraryDependencies += betterFiles,
