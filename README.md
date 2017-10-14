@@ -17,7 +17,9 @@ Arguments, inputs and expected reference output files are defined by test direct
  * Example test setup with DirSuite:
    * [tests](./examples/tests/) Example test corpus
    * [DirSuiteDemo](./examples/src/test/scala/DirSuiteDemo.scala) Demo setup against example test corpus.
-
+ * [Tackler Project](https://github.com/sn127/tackler) has extensive set of tests based on DirSuite
+   * [Tackler's dirsuite tests](https://github.com/sn127/tackler/tree/stable/tests)
+   * [Tackler's dirsuite clean up setup](https://github.com/sn127/tackler/blob/stable/project/TacklerTests.scala)
 
 ## Releases
 
@@ -28,7 +30,8 @@ Library configuration for sbt:
 
     libraryDependencies += "fi.sn127" %% "dirsuite" % "0.7.0"
 
-For release information and version history details, see [CHANGELOG](./CHANGELOG.md).
+For release information and version history details, see [CHANGELOG](./CHANGELOG.md). For Upgrade instructions,
+see [UPGRADE](./UPGRADE.md) .
 
 
 ## Contributing to DirSuite
@@ -54,11 +57,8 @@ Please make sure that you sign-off all your PR's commits.
 
 ## Credits
 
-See [THANKS](./THANKS.md) for full list of credits. Most notably 
-this started as a test tool for [Abandon](https://github.com/hrj/abandon) 
-and it grew from there to be something generally useful. 
-
-Obviously without [ScalaTest](http://www.scalatest.org/) this project 
+See [THANKS](./THANKS.md) for full list of credits. Obviously 
+without [ScalaTest](http://www.scalatest.org/) this project 
 would not exists.
 
 

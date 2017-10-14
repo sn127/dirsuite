@@ -1,6 +1,6 @@
 # Changes
 
-Utils-testing project uses [semantic versioning](http://semver.org/).
+DirSuite project uses [semantic versioning](http://semver.org/).
 
 
 ## Releases
@@ -8,6 +8,7 @@ Utils-testing project uses [semantic versioning](http://semver.org/).
 Latest release (for scala 2.12) is:
 
  * dirsuite: 0.7.0
+ * [Upgrade Guide](./UPGRADE.md)
 
 #### 0.7.0
 
