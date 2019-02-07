@@ -1,7 +1,0 @@
-/**/lib_managed/
-/**/src_managed/
-/**/target/
-/tests/**/out.*
-/.idea/
-*.swp
-*~

@@ -1,3 +1,0 @@
-# format: exec
-exec:success/out.txtxml01.file.txt;txt;
-exec:success/out.txtxml01.file.xml;xml;

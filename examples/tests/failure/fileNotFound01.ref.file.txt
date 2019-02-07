@@ -1,4 +1,0 @@
-hello
-success/out.txt01.file.txt
-1
-world

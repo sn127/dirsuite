@@ -1,3 +1,0 @@
-# format: exec
-exec:success/out.mixed01.file.txt;txt;1;2;
-exec:success/out.mixed01.file.xml;xml;3;4;

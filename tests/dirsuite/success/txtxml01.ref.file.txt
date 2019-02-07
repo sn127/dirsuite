@@ -1,4 +1,0 @@
-hello
-success/out.txtxml01.file.txt
-txt
-world

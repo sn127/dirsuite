@@ -1,6 +1,0 @@
-hello
-success/out.mixed01.file.txt
-txt
-1
-2
-world

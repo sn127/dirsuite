@@ -1,5 +1,0 @@
-hello
-success/out.txt03.2nd.txt
-1
-2
-world

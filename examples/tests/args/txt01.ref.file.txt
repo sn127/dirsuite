@@ -1,9 +1,0 @@
-hello
-args/out.txt01.file.txt
-1
-2
--c
-txt01.conf
--X
--q
-world
